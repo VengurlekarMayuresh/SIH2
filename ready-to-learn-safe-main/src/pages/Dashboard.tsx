@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import Sidebar from "@/components/Sidebar";
-import AlertsWidget from "@/components/AlertsWidget";
 import axios from "axios";
 import { 
   BookOpen, 
@@ -348,10 +347,6 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Alerts Section */}
-          <div className="mb-8">
-            <AlertsWidget maxAlerts={3} showWeather={true} />
-          </div>
 
           {/* Recent Activity & Next Badge */}
           <div className="grid lg:grid-cols-3 gap-6">

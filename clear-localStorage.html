@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear LocalStorage</title>
+</head>
+<body>
+    <h1>🔧 Fix Authentication Issues</h1>
+    <p>If you're experiencing JWT authentication errors, click the button below to clear all stored tokens:</p>
+    <button onclick="clearTokens()" style="padding: 10px 20px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">Clear All Tokens</button>
+    <div id="result" style="margin-top: 20px;"></div>
+    
+    <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 5px;">
+        <h3>📝 Next Steps:</h3>
+        <ol>
+            <li>Click "Clear All Tokens" above</li>
+            <li>Go to <a href="http://localhost:8080" target="_blank">http://localhost:8080</a></li>
+            <li>Click "Login" and sign in again with your credentials</li>
+            <li>All JWT authentication errors should be resolved</li>
+        </ol>
+    </div>
+    
+    <script>
+        function clearTokens() {
+            // Clear all localStorage items
+            localStorage.clear();
+            
+            // Also remove specific token keys just in case
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('token');
+            localStorage.removeItem('userData');
+            localStorage.removeItem('userType');
+            
+            document.getElementById('result').innerHTML = 
+                '<p style="color: green;">✅ All tokens and localStorage cleared successfully!</p>' +
+                '<p>You can now close this tab and try logging in again.</p>';
+        }
+        
+        // Show current localStorage contents
+        window.onload = function() {
+            const keys = Object.keys(localStorage);
+            if (keys.length > 0) {
+                document.getElementById('result').innerHTML = 
+                    '<p style="color: orange;">Found localStorage items: ' + keys.join(', ') + '</p>' +
+                    '<p>Click the button above to clear them.</p>';
+            } else {
+                document.getElementById('result').innerHTML = 
+                    '<p style="color: green;">LocalStorage is already empty.</p>';
+            }
+        };
+    </script>
+</body>
+</html>

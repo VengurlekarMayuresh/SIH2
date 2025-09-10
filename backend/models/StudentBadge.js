@@ -120,7 +120,7 @@ studentBadgeSchema.statics.getStudentBadges = async function(studentId) {
         })
         .populate('badge')
         .populate('quiz', 'title')
-        .populate('moduleId', 'title')
+        .populate('metadata.moduleId', 'title')
         .sort({ earnedAt: -1 });
         
         // Calculate badge statistics
