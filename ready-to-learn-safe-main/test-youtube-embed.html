@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Embed Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .video-container { 
+            position: relative; 
+            width: 100%; 
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            margin: 20px 0;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        iframe { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+        }
+        .test-url { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>🎥 YouTube Embed Test</h1>
+    <p>Testing the videos from your Fire Safety module:</p>
+
+    <h3>Video 1: Understanding Fire</h3>
+    <div class="test-url">URL: https://www.youtube.com/watch?v=gS9b-b-uJkE</div>
+    <div class="video-container">
+        <iframe
+            src="https://www.youtube.com/embed/gS9b-b-uJkE"
+            title="Understanding Fire"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen>
+        </iframe>
+    </div>
+
+    <h3>Video 2: Fire Extinguisher Use</h3>
+    <div class="test-url">URL: https://www.youtube.com/watch?v=j4C6_hWzU8c</div>
+    <div class="video-container">
+        <iframe
+            src="https://www.youtube.com/embed/j4C6_hWzU8c"
+            title="Fire Extinguisher Use"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen>
+        </iframe>
+    </div>
+
+    <h3>Video 3: Evacuation Drills</h3>
+    <div class="test-url">URL: https://www.youtube.com/watch?v=S8pB4k_Jb9k</div>
+    <div class="video-container">
+        <iframe
+            src="https://www.youtube.com/embed/S8pB4k_Jb9k"
+            title="Evacuation Drills"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen>
+        </iframe>
+    </div>
+
+    <script>
+        // Test the YouTube URL parsing function
+        function getYouTubeVideoId(url) {
+            const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+            const match = url.match(regex);
+            return match ? match[1] : null;
+        }
+
+        // Test URLs from your database
+        const testUrls = [
+            'https://www.youtube.com/watch?v=gS9b-b-uJkE',
+            'https://www.youtube.com/watch?v=j4C6_hWzU8c', 
+            'https://www.youtube.com/watch?v=S8pB4k_Jb9k'
+        ];
+
+        console.log('🎥 Testing YouTube URL parsing:');
+        testUrls.forEach(url => {
+            const videoId = getYouTubeVideoId(url);
+            console.log(`URL: ${url} → Video ID: ${videoId}`);
+        });
+    </script>
+</body>
+</html>

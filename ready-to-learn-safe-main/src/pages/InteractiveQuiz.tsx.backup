@@ -1,0 +1,828 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import Sidebar from "@/components/Sidebar";
+import { 
+  Trophy, 
+  Star, 
+  RefreshCw, 
+  Clock, 
+  Target, 
+  BookOpen, 
+  CheckCircle2,
+  AlertCircle,
+  Lightbulb,
+  Timer,
+  BarChart3,
+  Share2,
+  Brain,
+  Zap,
+  Award,
+  TrendingUp,
+  PlayCircle,
+  PauseCircle
+} from "lucide-react";
+
+interface QuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correct: number;
+  explanation: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  category: string;
+  points: number;
+  timeLimit?: number;
+  hint?: string;
+}
+
+interface QuizSession {
+  id: string;
+  moduleId: string;
+  questions: QuizQuestion[];
+  timeLimit: number;
+  passingScore: number;
+  allowRetakes: boolean;
+  showExplanations: boolean;
+  randomizeQuestions: boolean;
+}
+
+interface QuizResult {
+  score: number;
+  percentage: number;
+  totalQuestions: number;
+  correctAnswers: number;
+  timeSpent: number;
+  badge?: string;
+  improvements: string[];
+  nextRecommendations: string[];
+}
+
+const InteractiveQuiz = () => {
+  const { moduleId, chapterId } = useParams();
+  const navigate = useNavigate();
+  
+  // Quiz State
+  const [quizSession, setQuizSession] = useState<QuizSession | null>(null);
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [answers, setAnswers] = useState<{ [key: number]: number }>({});
+  const [showExplanation, setShowExplanation] = useState(false);
+  const [quizCompleted, setQuizCompleted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Timer State
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [totalTimeSpent, setTotalTimeSpent] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [questionStartTime, setQuestionStartTime] = useState(Date.now());
+  
+  // Performance State
+  const [questionTimes, setQuestionTimes] = useState<number[]>([]);
+  const [confidence, setConfidence] = useState<{ [key: number]: number }>({});
+  const [hintsUsed, setHintsUsed] = useState<number[]>([]);
+  const [result, setResult] = useState<QuizResult | null>(null);
+
+  // Mock quiz data - In real app, fetch from backend
+  const mockQuizSession: QuizSession = {
+    id: '1',
+    moduleId: moduleId || '',
+    timeLimit: 1800, // 30 minutes
+    passingScore: 70,
+    allowRetakes: true,
+    showExplanations: true,
+    randomizeQuestions: false,
+    questions: [
+      {
+        id: '1',
+        question: 'What is the first step when you discover a fire in your workplace?',
+        options: [
+          'Try to put it out yourself',
+          'Sound the fire alarm immediately',
+          'Gather your belongings',
+          'Take a photo for evidence'
+        ],
+        correct: 1,
+        explanation: 'Always sound the fire alarm first to alert everyone in the building. Your safety and the safety of others is the top priority.',
+        difficulty: 'medium',
+        category: 'Fire Safety',
+        points: 10,
+        timeLimit: 30,
+        hint: 'Think about alerting others first before taking any other action.'
+      },
+      {
+        id: '2',
+        question: 'During an earthquake, what should you do if you are indoors?',
+        options: [
+          'Run outside immediately',
+          'Stand in a doorway',
+          'Drop, Cover, and Hold On',
+          'Hide under a staircase'
+        ],
+        correct: 2,
+        explanation: 'Drop to hands and knees, take cover under a sturdy desk or table, and hold on. This protects you from falling objects.',
+        difficulty: 'easy',
+        category: 'Earthquake Safety',
+        points: 5,
+        timeLimit: 25,
+        hint: 'Remember the three-word phrase taught in earthquake safety training.'
+      },
+      {
+        id: '3',
+        question: 'How much emergency water should you store per person per day?',
+        options: [
+          '1 gallon (4 liters)',
+          '2 gallons (8 liters)',
+          '3 gallons (12 liters)',
+          '4 gallons (16 liters)'
+        ],
+        correct: 0,
+        explanation: 'The recommendation is 1 gallon (4 liters) per person per day for drinking, cooking, and basic hygiene needs.',
+        difficulty: 'hard',
+        category: 'Emergency Preparedness',
+        points: 15,
+        timeLimit: 35,
+        hint: 'This is the standard recommendation by emergency management agencies.'
+      },
+      {
+        id: '4',
+        question: 'What should you do if caught in a flood while driving?',
+        options: [
+          'Drive through quickly',
+          'Turn around and find another route',
+          'Stay in the car and wait',
+          'Drive slowly and carefully'
+        ],
+        correct: 1,
+        explanation: 'Turn Around, Don\'t Drown! Just 6 inches of moving water can knock you over, and 12 inches can carry away a vehicle.',
+        difficulty: 'medium',
+        category: 'Flood Safety',
+        points: 10,
+        timeLimit: 30,
+        hint: 'Remember the safety slogan about flooding and vehicles.'
+      },
+      {
+        id: '5',
+        question: 'How often should smoke detector batteries be tested?',
+        options: [
+          'Once a year',
+          'Every 6 months',
+          'Monthly',
+          'Weekly'
+        ],
+        correct: 2,
+        explanation: 'Smoke detectors should be tested monthly to ensure they are working properly. Change batteries at least once a year.',
+        difficulty: 'easy',
+        category: 'Fire Safety',
+        points: 5,
+        timeLimit: 20,
+        hint: 'Think about a regular maintenance schedule that\'s not too frequent but ensures safety.'
+      }
+    ]
+  };
+
+  // Initialize quiz
+  useEffect(() => {
+    const initializeQuiz = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch quiz data from backend
+        const response = await fetch(`/api/modules/${moduleId}/quiz`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const quizData = await response.json();
+        
+        // If no quiz data from backend, use mock data as fallback
+        const sessionData = quizData || mockQuizSession;
+        
+        setQuizSession(sessionData);
+        setTimeLeft(sessionData.timeLimit);
+        setQuestionStartTime(Date.now());
+        setLoading(false);
+      } catch (err) {
+        console.error('Failed to load quiz from backend, using mock data:', err);
+        
+        // Fallback to mock data if backend fails
+        setQuizSession(mockQuizSession);
+        setTimeLeft(mockQuizSession.timeLimit);
+        setQuestionStartTime(Date.now());
+        setLoading(false);
+      }
+    };
+
+    initializeQuiz();
+  }, [moduleId, chapterId]);
+
+  // Timer effect
+  useEffect(() => {
+    if (!quizSession || quizCompleted || isPaused || timeLeft <= 0) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          handleTimeUp();
+          return 0;
+        }
+        return prev - 1;
+      });
+      setTotalTimeSpent(prev => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [quizSession, quizCompleted, isPaused, timeLeft]);
+
+  const handleTimeUp = () => {
+    setQuizCompleted(true);
+    calculateResults();
+  };
+
+  const handleAnswerSelect = (answerIndex: number) => {
+    if (showExplanation) return;
+    
+    const timeSpent = (Date.now() - questionStartTime) / 1000;
+    setQuestionTimes(prev => {
+      const newTimes = [...prev];
+      newTimes[currentQuestion] = timeSpent;
+      return newTimes;
+    });
+    
+    setSelectedAnswer(answerIndex);
+    setAnswers(prev => ({ ...prev, [currentQuestion]: answerIndex }));
+  };
+
+  const handleConfidence = (level: number) => {
+    setConfidence(prev => ({ ...prev, [currentQuestion]: level }));
+  };
+
+  const handleUseHint = () => {
+    setHintsUsed(prev => [...prev, currentQuestion]);
+  };
+
+  const handleNext = () => {
+    if (!quizSession) return;
+
+    if (currentQuestion < quizSession.questions.length - 1) {
+      setCurrentQuestion(prev => prev + 1);
+      setSelectedAnswer(answers[currentQuestion + 1] || null);
+      setShowExplanation(false);
+      setQuestionStartTime(Date.now());
+    } else {
+      setQuizCompleted(true);
+      calculateResults();
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentQuestion > 0) {
+      setCurrentQuestion(prev => prev - 1);
+      setSelectedAnswer(answers[currentQuestion - 1] || null);
+      setShowExplanation(false);
+      setQuestionStartTime(Date.now());
+    }
+  };
+
+  const calculateResults = () => {
+    if (!quizSession) return;
+
+    const correctAnswers = quizSession.questions.reduce((count, question, index) => {
+      return answers[index] === question.correct ? count + 1 : count;
+    }, 0);
+
+    const totalPoints = quizSession.questions.reduce((total, question, index) => {
+      if (answers[index] === question.correct) {
+        let points = question.points;
+        // Deduct points for hints used
+        if (hintsUsed.includes(index)) points *= 0.8;
+        // Bonus for speed (if answered in less than half the time limit)
+        if (questionTimes[index] && questionTimes[index] < (question.timeLimit || 30) / 2) {
+          points *= 1.2;
+        }
+        return total + points;
+      }
+      return total;
+    }, 0);
+
+    const maxPoints = quizSession.questions.reduce((total, question) => total + question.points, 0);
+    const percentage = Math.round((totalPoints / maxPoints) * 100);
+
+    const badge = getBadge(percentage, totalTimeSpent);
+    const improvements = getImprovements(answers, quizSession.questions);
+    const nextRecommendations = getRecommendations(percentage, answers, quizSession.questions);
+
+    const result: QuizResult = {
+      score: totalPoints,
+      percentage,
+      totalQuestions: quizSession.questions.length,
+      correctAnswers,
+      timeSpent: totalTimeSpent,
+      badge,
+      improvements,
+      nextRecommendations
+    };
+
+    setResult(result);
+    
+    // Submit results to backend
+    submitResults(result);
+  };
+
+  const getBadge = (percentage: number, timeSpent: number): string => {
+    if (percentage >= 95 && timeSpent < 600) return 'Lightning Expert ⚡';
+    if (percentage >= 90) return 'Safety Master 🏆';
+    if (percentage >= 80) return 'Safety Expert 🌟';
+    if (percentage >= 70) return 'Safety Scholar 📚';
+    if (percentage >= 60) return 'Safety Learner 🎯';
+    return 'Future Hero 💪';
+  };
+
+  const getImprovements = (userAnswers: { [key: number]: number }, questions: QuizQuestion[]): string[] => {
+    const improvements: string[] = [];
+    const wrongCategories: { [key: string]: number } = {};
+
+    questions.forEach((question, index) => {
+      if (userAnswers[index] !== question.correct) {
+        wrongCategories[question.category] = (wrongCategories[question.category] || 0) + 1;
+      }
+    });
+
+    Object.entries(wrongCategories).forEach(([category, count]) => {
+      improvements.push(`Review ${category} concepts (${count} questions missed)`);
+    });
+
+    return improvements;
+  };
+
+  const getRecommendations = (percentage: number, userAnswers: { [key: number]: number }, questions: QuizQuestion[]): string[] => {
+    const recommendations: string[] = [];
+
+    if (percentage < 70) {
+      recommendations.push('Retake this quiz after reviewing the module content');
+      recommendations.push('Join a study group for this topic');
+    } else if (percentage < 85) {
+      recommendations.push('Review the explanations for missed questions');
+      recommendations.push('Practice with additional quiz questions');
+    } else {
+      recommendations.push('Move on to the next module');
+      recommendations.push('Consider helping others in the community forum');
+    }
+
+    return recommendations;
+  };
+
+  const submitResults = async (result: QuizResult) => {
+    try {
+      const response = await fetch('/api/student/quiz/submit', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          moduleId,
+          chapterId,
+          quizId: quizSession?.id,
+          answers: Object.entries(answers).map(([questionIndex, answerIndex]) => ({
+            questionId: quizSession?.questions[parseInt(questionIndex)]?.id,
+            selectedAnswer: answerIndex,
+            timeSpent: questionTimes[parseInt(questionIndex)] || 0,
+            confidence: confidence[parseInt(questionIndex)],
+            hintUsed: hintsUsed.includes(parseInt(questionIndex))
+          })),
+          result: {
+            score: result.score,
+            percentage: result.percentage,
+            totalQuestions: result.totalQuestions,
+            correctAnswers: result.correctAnswers,
+            timeSpent: result.timeSpent,
+            badge: result.badge,
+            completedAt: new Date()
+          }
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to submit quiz results: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Quiz results submitted successfully:', data);
+      
+    } catch (err) {
+      console.error('Failed to submit results:', err);
+      // Still allow user to see results even if submission fails
+    }
+  };
+
+  const formatTime = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getDifficultyColor = (difficulty: string): string => {
+    switch (difficulty) {
+      case 'easy': return 'bg-green-100 text-green-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'hard': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Loading State
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar />
+        <main className="flex-1 p-8">
+          <div className="max-w-2xl mx-auto space-y-6">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-64 w-full" />
+            <div className="flex gap-4">
+              <Skeleton className="h-10 w-24" />
+              <Skeleton className="h-10 w-24" />
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Error State
+  if (error) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar />
+        <main className="flex-1 p-8">
+          <div className="max-w-2xl mx-auto">
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!quizSession) return null;
+
+  // Quiz Completion State
+  if (quizCompleted && result) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar />
+        <main className="flex-1 p-8">
+          <div className="max-w-3xl mx-auto">
+            <Card className="text-center">
+              <CardHeader>
+                <div className="w-24 h-24 mx-auto mb-4 bg-gradient-to-r from-secondary to-accent rounded-full flex items-center justify-center">
+                  <Trophy className="h-12 w-12 text-white" />
+                </div>
+                <CardTitle className="text-3xl font-bold mb-2">Quiz Complete!</CardTitle>
+                <p className="text-xl text-muted-foreground mb-4">{result.badge}</p>
+                
+                {/* Score Overview */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg p-4">
+                    <div className="text-2xl font-bold text-primary">{result.percentage}%</div>
+                    <div className="text-sm text-muted-foreground">Score</div>
+                  </div>
+                  <div className="bg-gradient-to-br from-accent/10 to-accent/5 rounded-lg p-4">
+                    <div className="text-2xl font-bold text-accent">{result.correctAnswers}/{result.totalQuestions}</div>
+                    <div className="text-sm text-muted-foreground">Correct</div>
+                  </div>
+                  <div className="bg-gradient-to-br from-secondary/10 to-secondary/5 rounded-lg p-4">
+                    <div className="text-2xl font-bold text-secondary">{formatTime(result.timeSpent)}</div>
+                    <div className="text-sm text-muted-foreground">Time</div>
+                  </div>
+                  <div className="bg-gradient-to-br from-primary/10 to-accent/5 rounded-lg p-4">
+                    <div className="text-2xl font-bold text-primary">{Math.round(result.score)}</div>
+                    <div className="text-sm text-muted-foreground">Points</div>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-6">
+                {/* Performance Analysis */}
+                {result.improvements.length > 0 && (
+                  <Card className="bg-gradient-to-r from-orange/5 to-orange/10 border-orange/20">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <Lightbulb className="h-5 w-5 text-orange-600" />
+                        Areas for Improvement
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-2 text-left">
+                        {result.improvements.map((improvement, index) => (
+                          <li key={index} className="flex items-start gap-2">
+                            <Target className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm">{improvement}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Recommendations */}
+                <Card className="bg-gradient-to-r from-blue/5 to-blue/10 border-blue/20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <TrendingUp className="h-5 w-5 text-blue-600" />
+                      Next Steps
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2 text-left">
+                      {result.nextRecommendations.map((recommendation, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm">{recommendation}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+
+                {/* Actions */}
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  {quizSession.allowRetakes && (
+                    <Button 
+                      onClick={() => window.location.reload()}
+                      size="lg"
+                      className="bg-gradient-to-r from-primary to-accent text-white"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Retake Quiz
+                    </Button>
+                  )}
+                  <Button 
+                    variant="outline" 
+                    size="lg"
+                    onClick={() => navigate(`/modules/${moduleId}`)}
+                  >
+                    <BookOpen className="h-4 w-4 mr-2" />
+                    Back to Module
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="lg"
+                    onClick={() => {/* Share functionality */}}
+                  >
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Share Result
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Quiz Interface
+  const currentQ = quizSession.questions[currentQuestion];
+  const progress = ((currentQuestion + 1) / quizSession.questions.length) * 100;
+
+  return (
+    <div className="flex min-h-screen bg-background">
+      <Sidebar />
+      
+      <main className="flex-1 p-8">
+        <div className="max-w-3xl mx-auto">
+          {/* Quiz Header */}
+          <div className="mb-8">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">Interactive Safety Quiz</h1>
+                <p className="text-muted-foreground">Test your safety knowledge</p>
+              </div>
+              
+              {/* Timer and Stats */}
+              <div className="flex gap-4">
+                <Card className="p-3">
+                  <div className="flex items-center gap-2">
+                    <Timer className={`h-4 w-4 ${timeLeft < 300 ? 'text-red-500' : 'text-primary'}`} />
+                    <span className={`font-mono text-sm ${timeLeft < 300 ? 'text-red-500' : ''}`}>
+                      {formatTime(timeLeft)}
+                    </span>
+                  </div>
+                </Card>
+                
+                <Card className="p-3">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-accent" />
+                    <span className="text-sm font-medium">
+                      {currentQuestion + 1} / {quizSession.questions.length}
+                    </span>
+                  </div>
+                </Card>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsPaused(!isPaused)}
+                  className="p-3"
+                >
+                  {isPaused ? <PlayCircle className="h-4 w-4" /> : <PauseCircle className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+            
+            <Progress value={progress} className="h-2 mb-2" />
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>Progress: {Math.round(progress)}%</span>
+              <span>Passing Score: {quizSession.passingScore}%</span>
+            </div>
+          </div>
+
+          {/* Question Card */}
+          <Card className="mb-6">
+            <CardHeader>
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex gap-2">
+                  <Badge className={getDifficultyColor(currentQ.difficulty)}>
+                    {currentQ.difficulty}
+                  </Badge>
+                  <Badge variant="outline">{currentQ.category}</Badge>
+                  <Badge variant="outline">{currentQ.points} points</Badge>
+                </div>
+                
+                {currentQ.hint && !hintsUsed.includes(currentQuestion) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleUseHint}
+                  >
+                    <Lightbulb className="h-4 w-4 mr-2" />
+                    Hint
+                  </Button>
+                )}
+              </div>
+              
+              <CardTitle className="text-xl">
+                Q{currentQuestion + 1}: {currentQ.question}
+              </CardTitle>
+              
+              {hintsUsed.includes(currentQuestion) && currentQ.hint && (
+                <Alert className="mt-4">
+                  <Lightbulb className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Hint:</strong> {currentQ.hint}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </CardHeader>
+            
+            <CardContent className="space-y-4">
+              {currentQ.options.map((option, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleAnswerSelect(index)}
+                  className={`w-full p-4 text-left rounded-lg border-2 transition-all duration-200 ${
+                    selectedAnswer === index
+                      ? showExplanation
+                        ? index === currentQ.correct
+                          ? "border-green-500 bg-green-50 text-green-800"
+                          : "border-red-500 bg-red-50 text-red-800"
+                        : "border-primary bg-primary/10 text-primary"
+                      : "border-border hover:border-primary/50 hover:bg-hover"
+                  } ${showExplanation && index === currentQ.correct && selectedAnswer !== index ? 
+                    "border-green-500 bg-green-50 text-green-800" : ""
+                  }`}
+                  disabled={showExplanation}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-bold ${
+                      selectedAnswer === index
+                        ? showExplanation
+                          ? index === currentQ.correct
+                            ? "border-green-500 text-green-800 bg-green-100"
+                            : "border-red-500 text-red-800 bg-red-100"
+                          : "border-primary text-primary bg-primary/10"
+                        : "border-muted-foreground text-muted-foreground"
+                    } ${showExplanation && index === currentQ.correct && selectedAnswer !== index ? 
+                      "border-green-500 text-green-800 bg-green-100" : ""
+                    }`}>
+                      {String.fromCharCode(65 + index)}
+                    </div>
+                    <span className="flex-1">{option}</span>
+                    {showExplanation && index === currentQ.correct && (
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    )}
+                  </div>
+                </button>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Explanation */}
+          {showExplanation && (
+            <Card className="mb-6 border-accent/20 bg-gradient-to-r from-accent/5 to-transparent">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-accent rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Brain className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-accent mb-2">Explanation:</p>
+                    <p className="text-foreground">{currentQ.explanation}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Confidence Rating */}
+          {selectedAnswer !== null && !showExplanation && (
+            <Card className="mb-6">
+              <CardContent className="p-4">
+                <div className="text-sm font-medium mb-3">How confident are you in your answer?</div>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((level) => (
+                    <Button
+                      key={level}
+                      variant={confidence[currentQuestion] === level ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleConfidence(level)}
+                    >
+                      {level === 1 && "Not sure"}
+                      {level === 2 && "Somewhat"}
+                      {level === 3 && "Confident"}
+                      {level === 4 && "Very sure"}
+                      {level === 5 && "Certain"}
+                    </Button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Navigation */}
+          <div className="flex justify-between items-center">
+            <Button 
+              variant="outline" 
+              onClick={handlePrevious}
+              disabled={currentQuestion === 0}
+            >
+              Previous
+            </Button>
+
+            <div className="flex gap-2">
+              {selectedAnswer !== null && !showExplanation && (
+                <Button 
+                  variant="outline"
+                  onClick={() => setShowExplanation(true)}
+                  className="border-accent text-accent hover:bg-accent hover:text-accent-foreground"
+                >
+                  <Brain className="h-4 w-4 mr-2" />
+                  Show Explanation
+                </Button>
+              )}
+              
+              <Button 
+                onClick={handleNext}
+                disabled={selectedAnswer === null}
+                className="bg-gradient-to-r from-primary to-accent text-white"
+              >
+                {currentQuestion === quizSession.questions.length - 1 ? (
+                  <>
+                    <Trophy className="h-4 w-4 mr-2" />
+                    Finish Quiz
+                  </>
+                ) : (
+                  "Next Question"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default InteractiveQuiz;

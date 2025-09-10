@@ -1,0 +1,23 @@
+# Node.js
+node_modules/
+.env
+*.log
+dist/
+build/
+coverage/
+.DS_Store
+npm-debug.log
+
+# OS
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Misc
+*.bak
+*.tmp
