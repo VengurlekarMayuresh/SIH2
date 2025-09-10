@@ -98,7 +98,7 @@ const Leaderboard = () => {
     try {
       const response = await fetch(`/api/leaderboard/${type}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
           'Content-Type': 'application/json'
         }
       });
@@ -119,7 +119,7 @@ const Leaderboard = () => {
     try {
       const response = await fetch('/api/student/ranking', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
           'Content-Type': 'application/json'
         }
       });

@@ -1,82 +1,131 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Sidebar from "@/components/Sidebar";
-import { Trophy, Star, BookOpen, Award, TrendingUp, Calendar } from "lucide-react";
+import { Trophy, Star, BookOpen, Award, TrendingUp, Calendar, Loader2 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
+import { useEffect, useState } from "react";
+import axios from "axios";
 
-const quizScoreData = [
-  { date: "Week 1", score: 65 },
-  { date: "Week 2", score: 72 },
-  { date: "Week 3", score: 78 },
-  { date: "Week 4", score: 85 },
-  { date: "Week 5", score: 88 },
-  { date: "Week 6", score: 92 },
-];
+interface ProgressStats {
+  completedModules: number;
+  totalModules: number;
+  latestQuizScore: number;
+  earnedBadges: number;
+  overallProgress: number;
+}
 
-const moduleProgressData = [
-  { module: "Earthquake", progress: 100, color: "#3A7CA5" },
-  { module: "Fire", progress: 100, color: "#FF914D" },
-  { module: "Flood", progress: 85, color: "#4CAF50" },
-  { module: "Cyclone", progress: 60, color: "#3A7CA5" },
-  { module: "Pandemic", progress: 30, color: "#4CAF50" },
-];
+interface QuizScoreData {
+  date: string;
+  score: number;
+}
 
-const badges = [
-  {
-    title: "Earthquake Expert",
-    description: "Completed Earthquake Safety module with 95% score",
-    icon: "🏆",
-    color: "accent",
-    earned: true,
-    date: "2 weeks ago"
-  },
-  {
-    title: "Fire Safety Hero", 
-    description: "Mastered fire safety protocols and prevention",
-    icon: "🔥",
-    color: "secondary",
-    earned: true,
-    date: "1 week ago"
-  },
-  {
-    title: "First Aid Champion",
-    description: "Completed basic first aid training module",
-    icon: "🩹",
-    color: "primary",
-    earned: true,
-    date: "3 days ago"
-  },
-  {
-    title: "Safety Educator",
-    description: "Shared safety knowledge with 5+ people",
-    icon: "👨‍🏫",
-    color: "accent",
-    earned: true,
-    date: "1 day ago"
-  },
-  {
-    title: "Flood Preparedness",
-    description: "Complete flood safety module with 90% score",
-    icon: "🌊",
-    color: "primary",
-    earned: false,
-    date: "In Progress"
-  },
-  {
-    title: "Disaster Master",
-    description: "Complete all disaster modules with 85%+ average",
-    icon: "🎯",
-    color: "secondary",
-    earned: false,
-    date: "Locked"
-  }
-];
+interface ModuleProgressData {
+  module: string;
+  progress: number;
+  color: string;
+}
+
+interface Badge {
+  title: string;
+  description: string;
+  icon: string;
+  color: string;
+  earned: boolean;
+  date: string | Date;
+}
+
+interface ProgressData {
+  stats: ProgressStats;
+  quizScoreData: QuizScoreData[];
+  moduleProgressData: ModuleProgressData[];
+  badges: Badge[];
+  joinedDate: string;
+  improvement: number;
+}
 
 const Progress = () => {
-  const totalModules = moduleProgressData.length;
-  const completedModules = moduleProgressData.filter(m => m.progress === 100).length;
-  const averageScore = quizScoreData[quizScoreData.length - 1]?.score || 0;
-  const earnedBadges = badges.filter(b => b.earned).length;
-  const overallProgress = Math.round((moduleProgressData.reduce((sum, m) => sum + m.progress, 0) / totalModules));
+  const [progressData, setProgressData] = useState<ProgressData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProgressData = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          setError('Please log in to view your progress');
+          return;
+        }
+
+        const response = await axios.get('/api/student/progress-dashboard', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        setProgressData(response.data);
+      } catch (err: any) {
+        console.error('Error fetching progress data:', err);
+        setError(err.response?.data?.message || 'Failed to load progress data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProgressData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar />
+        <main className="flex-1 p-8">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <span className="ml-2 text-lg">Loading your progress...</span>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (error || !progressData) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar />
+        <main className="flex-1 p-8">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-red-600 mb-4">Error Loading Progress</h1>
+              <p className="text-muted-foreground">{error}</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  const { stats, quizScoreData, moduleProgressData, badges, joinedDate, improvement } = progressData;
+  const joinedDate_formatted = new Date(joinedDate);
+  const timeAgo = Math.floor((Date.now() - joinedDate_formatted.getTime()) / (1000 * 60 * 60 * 24 * 7));
+
+  const formatBadgeDate = (date: string | Date) => {
+    if (typeof date === 'string' && (date === 'Not earned' || date === 'Locked' || date === 'In Progress')) {
+      return date;
+    }
+    try {
+      const badgeDate = new Date(date);
+      const daysAgo = Math.floor((Date.now() - badgeDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysAgo === 0) return 'Today';
+      if (daysAgo === 1) return '1 day ago';
+      if (daysAgo < 7) return `${daysAgo} days ago`;
+      if (daysAgo < 14) return '1 week ago';
+      if (daysAgo < 30) return `${Math.floor(daysAgo / 7)} weeks ago`;
+      return `${Math.floor(daysAgo / 30)} month${Math.floor(daysAgo / 30) === 1 ? '' : 's'} ago`;
+    } catch {
+      return 'Recently';
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -97,7 +146,7 @@ const Progress = () => {
             <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
               <CardContent className="p-6 text-center">
                 <BookOpen className="h-8 w-8 text-primary mx-auto mb-3" />
-                <div className="text-2xl font-bold text-primary mb-1">{completedModules}/{totalModules}</div>
+                <div className="text-2xl font-bold text-primary mb-1">{stats.completedModules}/{stats.totalModules}</div>
                 <p className="text-sm text-muted-foreground">Modules Completed</p>
               </CardContent>
             </Card>
@@ -105,7 +154,7 @@ const Progress = () => {
             <Card className="bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/20">
               <CardContent className="p-6 text-center">
                 <Trophy className="h-8 w-8 text-secondary mx-auto mb-3" />
-                <div className="text-2xl font-bold text-secondary mb-1">{averageScore}%</div>
+                <div className="text-2xl font-bold text-secondary mb-1">{Math.round(stats.latestQuizScore)}%</div>
                 <p className="text-sm text-muted-foreground">Latest Quiz Score</p>
               </CardContent>
             </Card>
@@ -113,7 +162,7 @@ const Progress = () => {
             <Card className="bg-gradient-to-br from-accent/10 to-accent/5 border-accent/20">
               <CardContent className="p-6 text-center">
                 <Award className="h-8 w-8 text-accent mx-auto mb-3" />
-                <div className="text-2xl font-bold text-accent mb-1">{earnedBadges}</div>
+                <div className="text-2xl font-bold text-accent mb-1">{stats.earnedBadges}</div>
                 <p className="text-sm text-muted-foreground">Badges Earned</p>
               </CardContent>
             </Card>
@@ -121,7 +170,7 @@ const Progress = () => {
             <Card className="bg-gradient-to-br from-primary/10 to-accent/5 border-primary/20">
               <CardContent className="p-6 text-center">
                 <Star className="h-8 w-8 text-primary mx-auto mb-3" />
-                <div className="text-2xl font-bold text-primary mb-1">{overallProgress}%</div>
+                <div className="text-2xl font-bold text-primary mb-1">{stats.overallProgress}%</div>
                 <p className="text-sm text-muted-foreground">Overall Progress</p>
               </CardContent>
             </Card>
@@ -215,7 +264,7 @@ const Progress = () => {
                           ? `bg-${badge.color}/20 text-${badge.color}` 
                           : 'bg-muted text-muted-foreground'
                       }`}>
-                        {badge.earned ? `Earned ${badge.date}` : badge.date}
+                        {badge.earned ? `Earned ${formatBadgeDate(badge.date)}` : formatBadgeDate(badge.date)}
                       </span>
                     </div>
                   </div>
@@ -238,11 +287,11 @@ const Progress = () => {
               <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  <span>Started 6 weeks ago</span>
+                  <span>Started {timeAgo > 0 ? `${timeAgo} week${timeAgo === 1 ? '' : 's'} ago` : 'recently'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-4 w-4" />
-                  <span>27% improvement</span>
+                  <span>{improvement >= 0 ? '+' : ''}{improvement}% improvement</span>
                 </div>
               </div>
             </CardContent>

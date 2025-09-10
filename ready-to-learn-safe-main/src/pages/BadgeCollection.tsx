@@ -91,7 +91,7 @@ const BadgeCollection = () => {
     try {
       const response = await fetch('/api/student/badges', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
           'Content-Type': 'application/json'
         }
       });
@@ -113,7 +113,7 @@ const BadgeCollection = () => {
     try {
       const response = await fetch('/api/badges', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
           'Content-Type': 'application/json'
         }
       });

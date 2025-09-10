@@ -56,26 +56,6 @@ interface QuizCardsData {
   };
 }
 
-interface FeaturedQuiz {
-  id: string;
-  title: string;
-  description: string;
-  module: {
-    _id: string;
-    title: string;
-    thumbnail: string;
-  };
-  source: string; // 'system' for global content
-  questionCount: number;
-  timeLimit: number;
-  passingScore: number;
-  reason: string;
-}
-
-interface FeaturedData {
-  featured: FeaturedQuiz[];
-  categories: Array<{ name: string; count: number }>;
-}
 
 const QuizCards = () => {
   const navigate = useNavigate();
@@ -93,7 +73,6 @@ const QuizCards = () => {
   
   // State
   const [quizzes, setQuizzes] = useState<QuizCard[]>([]);
-  const [featuredQuizzes, setFeaturedQuizzes] = useState<FeaturedQuiz[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -140,47 +119,11 @@ const QuizCards = () => {
     }
   };
 
-  // Fetch featured quizzes
-  const fetchFeaturedQuizzes = async () => {
-    try {
-      const response = await fetch('http://localhost:5001/api/student/quizzes/featured', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('text/html')) {
-          console.warn('Backend API not available for featured quizzes. Skipping featured section.');
-          return;
-        }
-        throw new Error(`Failed to fetch featured quizzes: ${response.status} ${response.statusText}`);
-      }
-
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        console.warn('Featured quizzes API returned HTML instead of JSON. Skipping featured section.');
-        return;
-      }
-
-      const data: FeaturedData = await response.json();
-      setFeaturedQuizzes(data.featured);
-    } catch (err) {
-      console.error('Error fetching featured quizzes:', err);
-      // Don't show error for featured quizzes, just log it
-    }
-  };
-
   // Initial load
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([
-        fetchQuizzes(1),
-        fetchFeaturedQuizzes()
-      ]);
+      await fetchQuizzes(1);
       setLoading(false);
     };
 
@@ -259,23 +202,7 @@ const QuizCards = () => {
               <h1 className="text-3xl font-bold">Quiz Library</h1>
             </div>
 
-            {/* Featured Section Skeleton */}
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Featured Quizzes</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {[...Array(4)].map((_, i) => (
-                  <Card key={i}>
-                    <CardContent className="p-4">
-                      <Skeleton className="h-32 w-full mb-4" />
-                      <Skeleton className="h-4 w-3/4 mb-2" />
-                      <Skeleton className="h-3 w-1/2" />
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-
-            {/* All Quizzes Skeleton */}
+            {/* Quiz Skeleton */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[...Array(9)].map((_, i) => (
                 <Card key={i}>
@@ -335,47 +262,6 @@ const QuizCards = () => {
         </div>
       </div>
 
-      {/* Featured Quizzes */}
-      {featuredQuizzes.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Star className="h-5 w-5 text-yellow-500" />
-            <h2 className="text-2xl font-semibold">Featured Quizzes</h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {featuredQuizzes.map((quiz) => (
-              <Card key={quiz.id} className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 hover:shadow-lg transition-shadow cursor-pointer"
-                    onClick={() => navigate(`/quiz/${quiz.id}/overview`)}>
-                <CardContent className="p-4">
-                  <div className="aspect-video bg-white rounded-lg mb-3 flex items-center justify-center">
-                    <img 
-                      src={quiz.module.thumbnail} 
-                      alt={quiz.module.title}
-                      className="w-full h-full object-cover rounded-lg"
-                      onError={(e) => {
-                        e.currentTarget.src = '/placeholder-quiz.jpg';
-                      }}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <h3 className="font-semibold text-sm line-clamp-2">{quiz.title}</h3>
-                    <p className="text-xs text-gray-600">{quiz.module.title}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-blue-600 font-medium">{quiz.reason}</span>
-                      <div className="flex items-center gap-1 text-xs text-gray-500">
-                        <BookOpen className="h-3 w-3" />
-                        {quiz.questionCount}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-4">

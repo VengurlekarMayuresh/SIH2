@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const institutionRouter = require('./routes/institution');
 const studentRouter = require('./routes/student');
 const modulesRouter = require('./routes/modules');
+const alertsRouter = require('./routes/alerts');
 
 // Load environment variables
 dotenv.config();
@@ -37,6 +38,7 @@ app.use(express.json());
 app.use('/api', institutionRouter);
 app.use('/api', studentRouter);
 app.use('/api', modulesRouter);
+app.use('/api/alerts', alertsRouter);
 
 // Health check
 app.get('/', (req, res) => {

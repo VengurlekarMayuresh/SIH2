@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
+import DashboardTest from "./pages/Dashboard-test";
 import InstitutionDashboard from "./pages/InstitutionDashboard";
 import DisasterModules from "./pages/DisasterModules";
 import DisasterDetail from "./pages/DisasterDetail";

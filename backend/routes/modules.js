@@ -769,6 +769,257 @@ router.get('/student/quiz/attempts/:attemptId', authMiddleware, studentOnly, asy
 // === BADGE AND ACHIEVEMENT ROUTES ===
 // =========================================================
 
+// GET student's dashboard data (recent activity, streaks, next badge)
+router.get('/student/dashboard-data', authMiddleware, studentOnly, async (req, res) => {
+    try {
+        const studentId = req.user._id;
+        
+        // Get recent quiz attempts (last 5)
+        const recentQuizAttempts = await QuizAttempt.find({ 
+            student: studentId, 
+            status: 'submitted' 
+        })
+        .populate('quiz', 'title moduleId')
+        .populate({
+            path: 'quiz',
+            populate: {
+                path: 'moduleId',
+                select: 'title'
+            }
+        })
+        .sort({ createdAt: -1 })
+        .limit(5);
+        
+        // Get recent module completions
+        const recentModuleCompletions = await StudentProgress.find({
+            student: studentId,
+            completed: true
+        })
+        .populate('module', 'title')
+        .sort({ completionDate: -1 })
+        .limit(3);
+        
+        // Get recently earned badges (last 3)
+        const { badges: allBadges } = await StudentBadge.getStudentBadges(studentId);
+        const recentBadges = allBadges.slice(0, 3);
+        
+        // Calculate streak data
+        const allAttempts = await QuizAttempt.find({ 
+            student: studentId, 
+            status: 'submitted' 
+        })
+        .select('score createdAt')
+        .sort({ createdAt: -1 });
+        
+        // Calculate current streak (consecutive passed quizzes)
+        let currentStreak = 0;
+        for (let attempt of allAttempts) {
+            if (attempt.score.passed) {
+                currentStreak++;
+            } else {
+                break;
+            }
+        }
+        
+        // Get next badge info
+        const allAvailableBadges = await Badge.find().sort({ points: 1 });
+        const earnedBadgeIds = allBadges.map(sb => sb.badge._id.toString());
+        const nextBadge = allAvailableBadges.find(badge => 
+            !earnedBadgeIds.includes(badge._id.toString())
+        );
+        
+        // Get overall progress for next badge calculation
+        const totalModules = await Module.countDocuments();
+        const completedModules = await StudentProgress.countDocuments({
+            student: studentId,
+            completed: true
+        });
+        
+        // Prepare recent activity array
+        const recentActivity = [];
+        
+        // Add recent badges to activity
+        recentBadges.forEach(badge => {
+            recentActivity.push({
+                type: 'badge',
+                title: `Earned "${badge.badge.name}" badge`,
+                description: badge.badge.description,
+                time: badge.earnedAt,
+                icon: 'Award',
+                color: 'accent',
+                badge: badge.badge.rarity === 'gold' ? 'New!' : null
+            });
+        });
+        
+        // Add recent module completions to activity
+        recentModuleCompletions.forEach(completion => {
+            recentActivity.push({
+                type: 'module',
+                title: `Completed ${completion.module.title} module`,
+                description: 'Learned about disaster preparedness and safety measures',
+                time: completion.completionDate,
+                icon: 'BookOpen',
+                color: 'primary',
+                progress: 100
+            });
+        });
+        
+        // Add recent quiz attempts to activity
+        recentQuizAttempts.forEach(attempt => {
+            const moduleName = attempt.quiz.moduleId ? attempt.quiz.moduleId.title : 'General';
+            recentActivity.push({
+                type: 'quiz',
+                title: `Took ${attempt.quiz.title}`,
+                description: `Scored ${Math.round(attempt.score.percentage)}% - ${attempt.score.passed ? 'Great job!' : 'Keep practicing!'}`,
+                time: attempt.createdAt,
+                icon: 'HelpCircle',
+                color: 'secondary',
+                badge: `${Math.round(attempt.score.percentage)}%`
+            });
+        });
+        
+        // Sort all activity by time (most recent first)
+        recentActivity.sort((a, b) => new Date(b.time) - new Date(a.time));
+        
+        // Calculate today's progress
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        // Count today's completed activities
+        const todayQuizzes = await QuizAttempt.countDocuments({
+            student: studentId,
+            status: 'submitted',
+            createdAt: { $gte: today, $lt: tomorrow }
+        });
+        
+        const todayModules = await StudentProgress.countDocuments({
+            student: studentId,
+            completed: true,
+            completionDate: { $gte: today, $lt: tomorrow }
+        });
+        
+        const todayBadges = allBadges.filter(badge => {
+            const badgeDate = new Date(badge.earnedAt);
+            return badgeDate >= today && badgeDate < tomorrow;
+        }).length;
+        
+        const todayActivities = todayQuizzes + todayModules + todayBadges;
+        const dailyGoal = 3; // Default daily goal - could be made configurable per user
+        
+        res.json({
+            streak: currentStreak,
+            recentActivity: recentActivity.slice(0, 5), // Limit to 5 most recent
+            todayProgress: {
+                completed: todayActivities,
+                goal: dailyGoal,
+                percentage: Math.round((todayActivities / dailyGoal) * 100),
+                breakdown: {
+                    quizzes: todayQuizzes,
+                    modules: todayModules,
+                    badges: todayBadges
+                }
+            },
+            nextBadge: nextBadge ? {
+                name: nextBadge.name,
+                description: nextBadge.description,
+                icon: nextBadge.icon,
+                progress: Math.round((completedModules / totalModules) * 100),
+                requirement: `${completedModules}/${totalModules} modules completed`
+            } : null
+        });
+        
+    } catch (error) {
+        console.error("Error fetching student dashboard:", error);
+        res.status(500).json({ message: "Internal server error." });
+    }
+});
+
+// GET student's comprehensive progress dashboard
+router.get('/student/progress-dashboard', authMiddleware, studentOnly, async (req, res) => {
+    try {
+        const studentId = req.user._id;
+        
+        // Get all modules and progress
+        const modules = await Module.find().select('title thumbnail chapters');
+        const moduleProgresses = await StudentProgress.find({ student: studentId }).populate('module', 'title');
+        
+        // Get quiz attempts and scores
+        const quizAttempts = await QuizAttempt.find({ 
+            student: studentId, 
+            status: 'submitted' 
+        }).populate('quiz', 'title moduleId').sort({ createdAt: -1 });
+        
+        // Get student badges
+        const { badges, stats } = await StudentBadge.getStudentBadges(studentId);
+        
+        // Calculate overall statistics
+        const totalModules = modules.length;
+        const completedModules = moduleProgresses.filter(p => p.completed).length;
+        const totalBadges = badges.length;
+        
+        // Calculate quiz score trends (last 6 attempts or weeks)
+        const recentAttempts = quizAttempts.slice(0, 6).reverse();
+        const quizTrends = recentAttempts.map((attempt, index) => ({
+            date: `Attempt ${index + 1}`,
+            score: attempt.score.percentage
+        }));
+        
+        // Calculate module progress data
+        const moduleProgressData = modules.map(module => {
+            const progress = moduleProgresses.find(p => p.module._id.toString() === module._id.toString());
+            return {
+                module: module.title,
+                progress: progress ? (progress.completed ? 100 : 50) : 0, // 50% if started, 100% if completed
+                color: "#3A7CA5" // Default color
+            };
+        });
+        
+        // Calculate overall progress percentage
+        const overallProgress = totalModules > 0 ? Math.round((completedModules / totalModules) * 100) : 0;
+        
+        // Get latest quiz score
+        const latestQuizScore = quizAttempts.length > 0 ? quizAttempts[0].score.percentage : 0;
+        
+        // Prepare badge data with earned status
+        const allBadges = await Badge.find().sort({ createdAt: -1 });
+        const badgeData = allBadges.map(badge => {
+            const earnedBadge = badges.find(sb => sb.badge._id.toString() === badge._id.toString());
+            return {
+                title: badge.name,
+                description: badge.description,
+                icon: badge.icon,
+                color: badge.rarity === 'gold' ? 'accent' : badge.rarity === 'silver' ? 'secondary' : 'primary',
+                earned: !!earnedBadge,
+                date: earnedBadge ? earnedBadge.earnedAt : 'Not earned'
+            };
+        });
+        
+        res.json({
+            stats: {
+                completedModules,
+                totalModules,
+                latestQuizScore,
+                earnedBadges: totalBadges,
+                overallProgress
+            },
+            quizScoreData: quizTrends.length > 0 ? quizTrends : [
+                { date: "Week 1", score: 0 }
+            ],
+            moduleProgressData,
+            badges: badgeData,
+            joinedDate: req.user.createdAt,
+            improvement: quizTrends.length >= 2 ? 
+                Math.round(((quizTrends[quizTrends.length - 1].score - quizTrends[0].score) / quizTrends[0].score) * 100) : 0
+        });
+        
+    } catch (error) {
+        console.error("Error fetching student progress dashboard:", error);
+        res.status(500).json({ message: "Internal server error." });
+    }
+});
+
 // GET student's badges and achievements
 router.get('/student/badges', authMiddleware, studentOnly, async (req, res) => {
     try {
