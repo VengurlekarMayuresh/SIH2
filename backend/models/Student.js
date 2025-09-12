@@ -63,6 +63,34 @@ const studentSchema = new mongoose.Schema(
         }
       },
     },
+    virtualDrillsCompleted: [{
+      drillId: {
+        type: String,
+        required: true
+      },
+      drillType: {
+        type: String,
+        required: true
+      },
+      score: {
+        type: Number,
+        required: true,
+        min: 0,
+        max: 100
+      },
+      passed: {
+        type: Boolean,
+        required: true
+      },
+      completedAt: {
+        type: Date,
+        default: Date.now
+      },
+      attempts: {
+        type: Number,
+        default: 1
+      }
+    }],
   },
   {
     timestamps: true,

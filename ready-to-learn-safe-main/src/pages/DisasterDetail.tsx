@@ -285,60 +285,178 @@ const DisasterDetail = () => {
                   </div>
                 </div>
 
-                <div className="p-6">
+                <div className="p-8 bg-gradient-to-br from-gray-50 to-gray-100">
                   {currentChapter.contents.length === 0 ? (
                     <div className="text-center py-12">
                       <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                       <p className="text-gray-500 italic">No content available for this chapter yet.</p>
                     </div>
                   ) : (
-                    <div className="space-y-8">
+                    <div className="space-y-12">
                       {currentChapter.contents.map((content, contentIndex) => (
-                        <div key={content._id} className="">
+                        <div key={content._id}>
                           {content.type === 'text' && content.body && (
-                            <div>
-                              <h4 className="text-lg font-semibold text-gray-900 mb-4">Key Points:</h4>
-                              <div className="prose max-w-none">
-                                {content.body.split('\n').map((paragraph, pIndex) => {
-                                  if (paragraph.trim().startsWith('•') || paragraph.trim().startsWith('✓')) {
-                                    return (
-                                      <div key={pIndex} className="flex items-start gap-3 mb-3">
-                                        <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mt-0.5">
-                                          <CheckCircle className="h-4 w-4 text-green-600" />
-                                        </div>
-                                        <p className="text-gray-700 leading-relaxed">
-                                          {paragraph.replace(/^[•✓]\s*/, '')}
-                                        </p>
-                                      </div>
-                                    );
+                            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                              <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+                                <h4 className="text-xl font-bold text-white flex items-center gap-3">
+                                  <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                                    <BookOpen className="h-5 w-5 text-white" />
+                                  </div>
+                                  Lesson Content
+                                </h4>
+                              </div>
+                              <div className="p-8">
+                                {(() => {
+                                  const lines = content.body.split('\n');
+                                  let currentSection = '';
+                                  const sections = [];
+                                  let currentContent = [];
+                                  
+                                  lines.forEach((line, index) => {
+                                    if (line.startsWith('Lesson ') || line.startsWith('Chapter ')) {
+                                      if (currentContent.length > 0) {
+                                        sections.push({ title: currentSection, content: currentContent });
+                                        currentContent = [];
+                                      }
+                                      currentSection = line;
+                                    } else if (line.trim() === 'Key Points:' || line.trim() === "Do's and Don'ts:") {
+                                      if (currentContent.length > 0) {
+                                        sections.push({ title: currentSection, content: currentContent });
+                                        currentContent = [];
+                                      }
+                                      currentSection = line.trim();
+                                    } else if (line.trim() !== '') {
+                                      currentContent.push(line);
+                                    }
+                                  });
+                                  
+                                  if (currentContent.length > 0) {
+                                    sections.push({ title: currentSection, content: currentContent });
                                   }
-                                  return (
-                                    <p key={pIndex} className="text-gray-700 leading-relaxed mb-4">
-                                      {paragraph}
-                                    </p>
-                                  );
-                                })}
+                                  
+                                  return sections.map((section, sIndex) => (
+                                    <div key={sIndex} className={sIndex > 0 ? 'mt-8' : ''}>
+                                      {section.title && (
+                                        <div className="mb-6">
+                                          {section.title.startsWith('Lesson ') ? (
+                                            <div className="bg-gradient-to-r from-green-100 to-green-50 border-l-4 border-green-500 rounded-r-lg p-4 mb-4">
+                                              <h3 className="text-2xl font-bold text-green-800">{section.title}</h3>
+                                            </div>
+                                          ) : section.title === 'Key Points:' ? (
+                                            <div className="flex items-center gap-3 mb-4">
+                                              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                                <AlertTriangle className="h-5 w-5 text-blue-600" />
+                                              </div>
+                                              <h4 className="text-xl font-bold text-gray-800">{section.title}</h4>
+                                            </div>
+                                          ) : section.title === "Do's and Don'ts:" ? (
+                                            <div className="flex items-center gap-3 mb-4">
+                                              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                                                <Users className="h-5 w-5 text-purple-600" />
+                                              </div>
+                                              <h4 className="text-xl font-bold text-gray-800">{section.title}</h4>
+                                            </div>
+                                          ) : (
+                                            <h4 className="text-lg font-semibold text-gray-700 mb-4">{section.title}</h4>
+                                          )}
+                                        </div>
+                                      )}
+                                      <div className="space-y-4">
+                                        {section.content.map((line, lIndex) => {
+                                          if (line.trim().startsWith('✅')) {
+                                            return (
+                                              <div key={lIndex} className="flex items-start gap-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                                                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0">
+                                                  <CheckCircle className="h-4 w-4 text-white" />
+                                                </div>
+                                                <p className="text-green-800 font-medium leading-relaxed">
+                                                  {line.replace(/^✅\s*/, '')}
+                                                </p>
+                                              </div>
+                                            );
+                                          } else if (line.trim().startsWith('Do:')) {
+                                            return (
+                                              <div key={lIndex} className="flex items-start gap-4 p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+                                                <div className="w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0">
+                                                  <CheckCircle className="h-4 w-4 text-white" />
+                                                </div>
+                                                <p className="text-emerald-800 font-medium leading-relaxed">
+                                                  <span className="font-bold">DO:</span> {line.replace(/^Do:\s*/, '')}
+                                                </p>
+                                              </div>
+                                            );
+                                          } else if (line.trim().startsWith("Don't:")) {
+                                            return (
+                                              <div key={lIndex} className="flex items-start gap-4 p-4 bg-red-50 rounded-lg border border-red-200">
+                                                <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0">
+                                                  <AlertTriangle className="h-4 w-4 text-white" />
+                                                </div>
+                                                <p className="text-red-800 font-medium leading-relaxed">
+                                                  <span className="font-bold">DON'T:</span> {line.replace(/^Don't:\s*/, '')}
+                                                </p>
+                                              </div>
+                                            );
+                                          } else if (line.trim().startsWith('Step ') || line.trim().startsWith('During:') || line.trim().startsWith('After:')) {
+                                            return (
+                                              <div key={lIndex} className="flex items-start gap-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                                                <div className="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0">
+                                                  <Clock className="h-4 w-4 text-white" />
+                                                </div>
+                                                <p className="text-yellow-800 font-medium leading-relaxed">{line}</p>
+                                              </div>
+                                            );
+                                          } else if (line.trim().startsWith('-')) {
+                                            return (
+                                              <div key={lIndex} className="flex items-start gap-3 ml-6">
+                                                <div className="w-2 h-2 bg-gray-400 rounded-full mt-3 flex-shrink-0"></div>
+                                                <p className="text-gray-700 leading-relaxed">{line.replace(/^-\s*/, '')}</p>
+                                              </div>
+                                            );
+                                          } else if (line.trim()) {
+                                            return (
+                                              <p key={lIndex} className="text-gray-700 text-lg leading-relaxed font-medium">
+                                                {line}
+                                              </p>
+                                            );
+                                          }
+                                          return null;
+                                        })}
+                                      </div>
+                                    </div>
+                                  ));
+                                })()}
                               </div>
                             </div>
                           )}
                           
                           {content.type === 'video' && content.videoUrl && (
-                            <div className="">
-                              <h4 className="text-lg font-semibold text-gray-900 mb-4">Video Tutorial:</h4>
-                              <YouTubeEmbed videoUrl={content.videoUrl} />
+                            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden mt-8">
+                              <div className="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4">
+                                <h4 className="text-xl font-bold text-white flex items-center gap-3">
+                                  <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                                    <Play className="h-5 w-5 text-white" />
+                                  </div>
+                                  Educational Video
+                                </h4>
+                              </div>
+                              <div className="p-6">
+                                <YouTubeEmbed videoUrl={content.videoUrl} />
+                              </div>
                             </div>
                           )}
                           
                           {content.type === 'image' && content.imageUrl && (
-                            <div className="">
-                              <img 
-                                src={content.imageUrl} 
-                                alt="Module content" 
-                                className="w-full h-auto rounded-lg shadow-sm"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none';
-                                }}
-                              />
+                            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                              <div className="p-6">
+                                <img 
+                                  src={content.imageUrl} 
+                                  alt="Module content" 
+                                  className="w-full h-auto rounded-lg shadow-sm"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                  }}
+                                />
+                              </div>
                             </div>
                           )}
                         </div>

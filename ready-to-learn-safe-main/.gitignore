@@ -24,7 +24,7 @@ dist-ssr
 *.sw?
 
 # Additional ignores
-.env
+
 build/
 coverage/
 Thumbs.db

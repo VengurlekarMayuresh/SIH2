@@ -214,4 +214,187 @@ router.get('/institution/students', authMiddleware, institutionOnly, async (req,
     }
 });
 
+// Virtual Drill Completion
+router.post('/student/virtual-drill-complete', authMiddleware, studentOnly, async (req, res) => {
+    try {
+        const { drillId, drillType, score, passed } = req.body;
+        
+        if (!drillId || !drillType || typeof score !== 'number' || typeof passed !== 'boolean') {
+            return res.status(400).json({ message: "Missing required drill completion data" });
+        }
+        
+        const student = await Student.findById(req.user._id);
+        if (!student) {
+            return res.status(404).json({ message: "Student not found" });
+        }
+        
+        // Check if this drill type has been completed before
+        const existingDrillIndex = student.virtualDrillsCompleted.findIndex(
+            drill => drill.drillId === drillId
+        );
+        
+        if (existingDrillIndex !== -1) {
+            // Update existing drill completion with better score or increment attempts
+            const existingDrill = student.virtualDrillsCompleted[existingDrillIndex];
+            if (score > existingDrill.score) {
+                student.virtualDrillsCompleted[existingDrillIndex] = {
+                    drillId,
+                    drillType,
+                    score,
+                    passed,
+                    completedAt: new Date(),
+                    attempts: existingDrill.attempts + 1
+                };
+            } else {
+                // Just increment attempts
+                student.virtualDrillsCompleted[existingDrillIndex].attempts += 1;
+            }
+        } else {
+            // Add new drill completion
+            student.virtualDrillsCompleted.push({
+                drillId,
+                drillType,
+                score,
+                passed,
+                completedAt: new Date(),
+                attempts: 1
+            });
+        }
+        
+        await student.save();
+        
+        res.json({
+            message: "Drill completion recorded successfully",
+            drillCompletion: {
+                drillId,
+                drillType,
+                score,
+                passed,
+                completedAt: new Date()
+            }
+        });
+        
+    } catch (error) {
+        console.error('Virtual drill completion error:', error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Get Student Virtual Drill Progress
+router.get('/student/virtual-drills', authMiddleware, studentOnly, async (req, res) => {
+    try {
+        const student = await Student.findById(req.user._id).select('virtualDrillsCompleted');
+        if (!student) {
+            return res.status(404).json({ message: "Student not found" });
+        }
+        
+        const drillStats = {
+            totalDrillsCompleted: student.virtualDrillsCompleted.length,
+            drillsPassed: student.virtualDrillsCompleted.filter(drill => drill.passed).length,
+            averageScore: student.virtualDrillsCompleted.length > 0 
+                ? Math.round(student.virtualDrillsCompleted.reduce((sum, drill) => sum + drill.score, 0) / student.virtualDrillsCompleted.length)
+                : 0,
+            completedDrills: student.virtualDrillsCompleted.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
+        };
+        
+        res.json(drillStats);
+        
+    } catch (error) {
+        console.error('Get virtual drills error:', error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Enhanced Dashboard Data with Virtual Drills
+router.get('/student/dashboard-data', authMiddleware, studentOnly, async (req, res) => {
+    try {
+        const student = await Student.findById(req.user._id)
+            .populate('institutionId', 'name institutionId')
+            .select('name rollNo class virtualDrillsCompleted createdAt');
+        
+        if (!student) {
+            return res.status(404).json({ message: "Student not found" });
+        }
+        
+        // Calculate drill statistics
+        const drillStats = {
+            totalCompleted: student.virtualDrillsCompleted?.length || 0,
+            passed: student.virtualDrillsCompleted?.filter(drill => drill.passed).length || 0,
+            averageScore: student.virtualDrillsCompleted?.length > 0 
+                ? Math.round(student.virtualDrillsCompleted.reduce((sum, drill) => sum + drill.score, 0) / student.virtualDrillsCompleted.length)
+                : 0
+        };
+        
+        // Mock recent activity data (you can enhance this based on your needs)
+        const recentActivity = [
+            {
+                type: "virtual_drill",
+                title: "Flood Evacuation Drill",
+                description: drillStats.totalCompleted > 0 ? "Completed with good score" : "Ready to start",
+                time: student.virtualDrillsCompleted?.length > 0 
+                    ? student.virtualDrillsCompleted[student.virtualDrillsCompleted.length - 1].completedAt
+                    : new Date().toISOString(),
+                icon: "Target",
+                color: "blue",
+                badge: drillStats.passed > 0 ? "Passed" : null
+            },
+            {
+                type: "learning",
+                title: "Disaster Preparedness",
+                description: "Continue learning about emergency response",
+                time: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+                icon: "BookOpen",
+                color: "green"
+            }
+        ];
+        
+        // Calculate today's progress
+        const todayProgress = {
+            completed: drillStats.passed,
+            goal: 3,
+            percentage: Math.min(100, Math.round((drillStats.passed / 3) * 100)),
+            breakdown: {
+                quizzes: 0, // You can connect this to your quiz system
+                modules: 0, // You can connect this to your modules system  
+                badges: drillStats.passed
+            }
+        };
+        
+        // Next badge logic
+        const nextBadge = drillStats.totalCompleted < 1 ? {
+            name: "Virtual Drill Novice",
+            description: "Complete your first virtual drill",
+            icon: "🎯",
+            progress: 0,
+            requirement: "Complete 1 virtual drill"
+        } : drillStats.passed < 3 ? {
+            name: "Emergency Responder",
+            description: "Pass 3 virtual drills",
+            icon: "🚨",
+            progress: Math.round((drillStats.passed / 3) * 100),
+            requirement: "Pass 3 virtual drills"
+        } : {
+            name: "Safety Champion",
+            description: "Master of emergency preparedness", 
+            icon: "🏆",
+            progress: 100,
+            requirement: "All drills mastered"
+        };
+        
+        const dashboardData = {
+            streak: Math.min(drillStats.totalCompleted, 7), // Mock streak calculation
+            recentActivity,
+            todayProgress,
+            nextBadge,
+            virtualDrillStats: drillStats
+        };
+        
+        res.json(dashboardData);
+        
+    } catch (error) {
+        console.error('Dashboard data error:', error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
 module.exports = router;

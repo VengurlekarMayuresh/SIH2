@@ -18,6 +18,7 @@ import Progress from "./pages/Progress";
 import Leaderboard from "./pages/Leaderboard";
 import BadgeCollection from "./pages/BadgeCollection";
 import WeatherSafety from "./pages/WeatherSafety";
+import VirtualDrills from "./pages/VirtualDrills";
 import NotFound from "./pages/NotFound";
 import AuthPage from "./pages/AuthPage";
 
@@ -47,6 +48,7 @@ const App = () => (
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/badges" element={<BadgeCollection />} />
               <Route path="/weather-safety" element={<WeatherSafety />} />
+              <Route path="/virtual-drills" element={<VirtualDrills />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
