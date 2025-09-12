@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import Sidebar from "@/components/Sidebar";
+import ResponsiveLayout from "@/components/ResponsiveLayout";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Search,
   Filter,
@@ -59,6 +60,17 @@ interface QuizCardsData {
 
 const QuizCards = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  
+  // Get user data for navbar
+  const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+  
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userData');
+    localStorage.removeItem('userType');
+    navigate('/');
+  };
   
   // Check authentication on component mount
   useEffect(() => {
@@ -193,50 +205,69 @@ const QuizCards = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex">
-        <Sidebar />
-        <main className="flex-1 p-6">
-          <div className="max-w-7xl mx-auto space-y-6">
-            <div className="flex items-center gap-4 mb-6">
-              <BookOpen className="h-8 w-8 text-blue-600" />
-              <h1 className="text-3xl font-bold">Quiz Library</h1>
-            </div>
-
-            {/* Quiz Skeleton */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(9)].map((_, i) => (
-                <Card key={i}>
-                  <CardContent className="p-6">
-                    <Skeleton className="h-40 w-full mb-4" />
-                    <Skeleton className="h-6 w-3/4 mb-2" />
-                    <Skeleton className="h-4 w-full mb-4" />
-                    <div className="flex justify-between">
-                      <Skeleton className="h-8 w-20" />
-                      <Skeleton className="h-8 w-24" />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+      <ResponsiveLayout 
+        title="Quiz Library"
+        user={userData?.name ? {
+          name: userData.name,
+          email: userData.email,
+          type: 'student'
+        } : undefined}
+        onLogout={handleLogout}
+      >
+        <div className="space-y-6">
+          <div className="flex items-center gap-4">
+            <BookOpen className="h-8 w-8 text-primary" />
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground">Quiz Library</h1>
+              <p className="text-muted-foreground text-sm md:text-base">Loading available quizzes...</p>
             </div>
           </div>
-        </main>
-      </div>
+
+          {/* Quiz Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(9)].map((_, i) => (
+              <Card key={i}>
+                <CardContent className="p-6">
+                  <Skeleton className="h-40 w-full mb-4" />
+                  <Skeleton className="h-6 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-full mb-4" />
+                  <div className="flex justify-between">
+                    <Skeleton className="h-8 w-20" />
+                    <Skeleton className="h-8 w-24" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </ResponsiveLayout>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex">
-        <Sidebar />
-        <main className="flex-1 p-6">
-          <div className="max-w-4xl mx-auto">
-            <Alert className="max-w-md mx-auto mt-8">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+      <ResponsiveLayout 
+        title="Quiz Library"
+        user={userData?.name ? {
+          name: userData.name,
+          email: userData.email,
+          type: 'student'
+        } : undefined}
+        onLogout={handleLogout}
+      >
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="text-center max-w-md">
+            <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="h-8 w-8 text-destructive" />
+            </div>
+            <h2 className="text-xl md:text-2xl font-semibold text-foreground mb-2">Unable to Load Quizzes</h2>
+            <p className="text-muted-foreground mb-4 text-sm md:text-base">{error}</p>
+            <Button onClick={() => window.location.reload()}>
+              Try Again
+            </Button>
           </div>
-        </main>
-      </div>
+        </div>
+      </ResponsiveLayout>
     );
   }
 
@@ -247,192 +278,200 @@ const QuizCards = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar />
-      <main className="flex-1 p-6">
-        <div className="max-w-7xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <BookOpen className="h-8 w-8 text-blue-600" />
-          <div>
-            <h1 className="text-3xl font-bold">Quiz Library</h1>
-            <p className="text-gray-600">Discover and take quizzes to test your knowledge</p>
+    <ResponsiveLayout 
+      title="Quiz Library"
+      user={userData?.name ? {
+        name: userData.name,
+        email: userData.email,
+        type: 'student'
+      } : undefined}
+      onLogout={handleLogout}
+    >
+      <div className="space-y-6 md:space-y-8">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <BookOpen className="h-8 w-8 text-primary" />
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground">Quiz Library</h1>
+              <p className="text-muted-foreground text-sm md:text-base">Discover and take quizzes to test your knowledge</p>
+            </div>
           </div>
         </div>
-      </div>
 
 
-      {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Search quizzes..."
-            value={searchTerm}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="pl-10"
-          />
+        {/* Search and Filters */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search quizzes..."
+              value={searchTerm}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          <Select value={selectedDifficulty} onValueChange={setSelectedDifficulty}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder="Difficulty" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Difficulties</SelectItem>
+              <SelectItem value="easy">Easy</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="hard">Hard</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button variant="outline" size="icon">
+            <Filter className="h-4 w-4" />
+          </Button>
         </div>
-        
-        <Select value={selectedDifficulty} onValueChange={setSelectedDifficulty}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Difficulty" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Difficulties</SelectItem>
-            <SelectItem value="easy">Easy</SelectItem>
-            <SelectItem value="medium">Medium</SelectItem>
-            <SelectItem value="hard">Hard</SelectItem>
-          </SelectContent>
-        </Select>
 
-        <Button variant="outline" size="icon">
-          <Filter className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {/* Quiz Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredQuizzes.map((quiz) => (
-          <Card key={quiz.id} className="group hover:shadow-lg transition-all duration-200 hover:-translate-y-1">
-            <div className="aspect-video relative overflow-hidden rounded-t-lg">
-              <img 
-                src={quiz.module.thumbnail} 
-                alt={quiz.module.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                onError={(e) => {
-                  e.currentTarget.src = '/placeholder-quiz.jpg';
-                }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-              <div className="absolute bottom-4 left-4 right-4">
-                <Badge className={`mb-2 ${getDifficultyColor(quiz.difficulty)}`}>
-                  {quiz.difficulty}
-                </Badge>
-                <h3 className="text-white font-semibold text-lg line-clamp-2">{quiz.title}</h3>
+        {/* Quiz Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          {filteredQuizzes.map((quiz) => (
+            <Card key={quiz.id} className="group hover:shadow-lg transition-all duration-200 hover:-translate-y-1">
+              <div className="aspect-video relative overflow-hidden rounded-t-lg">
+                <img 
+                  src={quiz.module.thumbnail} 
+                  alt={quiz.module.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                  onError={(e) => {
+                    e.currentTarget.src = '/placeholder-quiz.jpg';
+                  }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                <div className="absolute bottom-4 left-4 right-4">
+                  <Badge className={`mb-2 ${getDifficultyColor(quiz.difficulty)}`}>
+                    {quiz.difficulty}
+                  </Badge>
+                  <h3 className="text-white font-semibold text-lg line-clamp-2">{quiz.title}</h3>
+                </div>
               </div>
-            </div>
 
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                <p className="text-gray-600 text-sm line-clamp-2">{quiz.description}</p>
-                
-                <div className="flex items-center justify-between text-sm text-gray-500">
-                  <div className="flex items-center gap-1">
-                    <BookOpen className="h-4 w-4" />
-                    <span>{quiz.questionCount} questions</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    <span>{formatTime(quiz.timeLimit)}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Target className="h-4 w-4" />
-                    <span>{quiz.passingScore}%</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-600">
-                    <span className="font-medium">{quiz.module.title}</span>
-                    <br />
-                    <span className="text-xs">Global Content</span>
-                  </div>
-                </div>
-
-                {/* Previous Attempts */}
-                {quiz.attemptCount > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Your Performance:</span>
-                      <div className="flex items-center gap-2">
-                        {quiz.lastScore !== null && (
-                          <Badge 
-                            variant={quiz.lastScore >= quiz.passingScore ? "default" : "secondary"}
-                            className={quiz.lastScore >= quiz.passingScore ? "bg-green-500" : "bg-red-500"}
-                          >
-                            {quiz.lastScore}%
-                          </Badge>
-                        )}
-                        <span className="text-xs text-gray-500">{quiz.attemptCount} attempts</span>
-                      </div>
+              <CardContent className="p-4 md:p-6">
+                <div className="space-y-4">
+                  <p className="text-muted-foreground text-sm line-clamp-2">{quiz.description}</p>
+                  
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <BookOpen className="h-4 w-4" />
+                      <span>{quiz.questionCount} questions</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-4 w-4" />
+                      <span>{formatTime(quiz.timeLimit)}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Target className="h-4 w-4" />
+                      <span>{quiz.passingScore}%</span>
                     </div>
                   </div>
-                )}
 
-                <div className="flex items-center justify-between pt-4 border-t">
-                  <div className="flex items-center gap-2">
-                    {quiz.lastScore === 100 && (
-                      <Trophy className="h-4 w-4 text-yellow-500" />
-                    )}
-                    {quiz.attemptCount === 0 && (
-                      <Badge variant="outline" className="text-xs">
-                        New
-                      </Badge>
-                    )}
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-muted-foreground">
+                      <span className="font-medium text-foreground">{quiz.module.title}</span>
+                      <br />
+                      <span className="text-xs">Global Content</span>
+                    </div>
                   </div>
-                  
-                  <Button 
-                    onClick={() => navigate(`/quiz/${quiz.id}/overview`)}
-                    className="flex items-center gap-2"
-                  >
-                    <PlayCircle className="h-4 w-4" />
-                    {quiz.attemptCount > 0 ? 'View Quiz' : 'Take Quiz'}
-                  </Button>
+
+                  {/* Previous Attempts */}
+                  {quiz.attemptCount > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Your Performance:</span>
+                        <div className="flex items-center gap-2">
+                          {quiz.lastScore !== null && (
+                            <Badge 
+                              variant={quiz.lastScore >= quiz.passingScore ? "default" : "secondary"}
+                              className={quiz.lastScore >= quiz.passingScore ? "bg-green-500" : "bg-red-500"}
+                            >
+                              {quiz.lastScore}%
+                            </Badge>
+                          )}
+                          <span className="text-xs text-muted-foreground">{quiz.attemptCount} attempts</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-4 border-t">
+                    <div className="flex items-center gap-2">
+                      {quiz.lastScore === 100 && (
+                        <Trophy className="h-4 w-4 text-yellow-500" />
+                      )}
+                      {quiz.attemptCount === 0 && (
+                        <Badge variant="outline" className="text-xs">
+                          New
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    <Button 
+                      onClick={() => navigate(`/quiz/${quiz.id}/overview`)}
+                      className="flex items-center gap-2"
+                      size={isMobile ? "sm" : "default"}
+                    >
+                      <PlayCircle className="h-4 w-4" />
+                      {quiz.attemptCount > 0 ? 'View Quiz' : 'Take Quiz'}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Pagination */}
+        {pagination && pagination.pages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-6 md:mt-8">
+            <Button
+              variant="outline"
+              onClick={() => {
+                const newPage = currentPage - 1;
+                setCurrentPage(newPage);
+                fetchQuizzes(newPage);
+              }}
+              disabled={currentPage === 1}
+              size={isMobile ? "sm" : "default"}
+            >
+              Previous
+            </Button>
+            
+            <span className="px-2 md:px-4 py-2 text-sm text-muted-foreground">
+              Page {currentPage} of {pagination.pages}
+            </span>
+            
+            <Button
+              variant="outline"
+              onClick={() => {
+                const newPage = currentPage + 1;
+                setCurrentPage(newPage);
+                fetchQuizzes(newPage);
+              }}
+              disabled={currentPage === pagination.pages}
+              size={isMobile ? "sm" : "default"}
+            >
+              Next
+            </Button>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {filteredQuizzes.length === 0 && !loading && (
+          <div className="text-center py-12">
+            <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-foreground mb-2">No quizzes found</h3>
+            <p className="text-muted-foreground text-sm md:text-base">
+              {searchTerm ? 'Try adjusting your search terms' : 'No quizzes available at the moment'}
+            </p>
+          </div>
+        )}
       </div>
-
-      {/* Pagination */}
-      {pagination && pagination.pages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-8">
-          <Button
-            variant="outline"
-            onClick={() => {
-              const newPage = currentPage - 1;
-              setCurrentPage(newPage);
-              fetchQuizzes(newPage);
-            }}
-            disabled={currentPage === 1}
-          >
-            Previous
-          </Button>
-          
-          <span className="px-4 py-2 text-sm text-gray-600">
-            Page {currentPage} of {pagination.pages}
-          </span>
-          
-          <Button
-            variant="outline"
-            onClick={() => {
-              const newPage = currentPage + 1;
-              setCurrentPage(newPage);
-              fetchQuizzes(newPage);
-            }}
-            disabled={currentPage === pagination.pages}
-          >
-            Next
-          </Button>
-        </div>
-      )}
-
-      {/* Empty State */}
-      {filteredQuizzes.length === 0 && !loading && (
-        <div className="text-center py-12">
-          <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-600 mb-2">No quizzes found</h3>
-          <p className="text-gray-500">
-            {searchTerm ? 'Try adjusting your search terms' : 'No quizzes available at the moment'}
-          </p>
-        </div>
-      )}
-        </div>
-      </main>
-    </div>
+    </ResponsiveLayout>
   );
 };
 

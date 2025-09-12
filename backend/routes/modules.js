@@ -1643,8 +1643,347 @@ router.delete('/institution/modules/:moduleId/chapters/:chapterId/contents/:cont
     }
 });
 
+// =========================================================
+// === CLOUDINARY VIDEO UPLOAD ROUTES ===
+// =========================================================
 
+const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
+const { uploadVideo, uploadVideoFromUrl, deleteVideo, validateVideoFile, cleanupLocalFile } = require('../utils/uploadVideo');
+const { testCloudinaryConnection } = require('../config/cloudinary');
 
+// Configure multer for video uploads
+const upload = multer({
+    dest: 'uploads/videos/',
+    limits: {
+        fileSize: 100 * 1024 * 1024, // 100MB limit
+    },
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('video/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only video files are allowed'), false);
+        }
+    }
+});
 
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, '../uploads/videos');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Test Cloudinary connection
+router.get('/institution/cloudinary/test', authMiddleware, institutionOnly, async (req, res) => {
+    try {
+        const isConnected = await testCloudinaryConnection();
+        res.json({ 
+            connected: isConnected, 
+            message: isConnected ? 'Cloudinary connection successful' : 'Cloudinary connection failed'
+        });
+    } catch (error) {
+        res.status(500).json({ 
+            message: 'Error testing Cloudinary connection',
+            error: error.message 
+        });
+    }
+});
+
+// Upload video file to Cloudinary
+router.post('/institution/upload-video', 
+    authMiddleware, 
+    institutionOnly, 
+    upload.single('video'), 
+    async (req, res) => {
+        try {
+            if (!req.file) {
+                return res.status(400).json({ message: 'No video file uploaded' });
+            }
+
+            // Validate video file
+            const validation = validateVideoFile(req.file);
+            if (!validation.isValid) {
+                cleanupLocalFile(req.file.path);
+                return res.status(400).json({ message: validation.error });
+            }
+
+            console.log('📹 Uploading video to Cloudinary...', {
+                filename: req.file.originalname,
+                size: `${Math.round(req.file.size / (1024 * 1024))}MB`
+            });
+
+            // Upload to Cloudinary
+            const uploadResult = await uploadVideo(req.file.path, {
+                public_id: `video_${Date.now()}_${req.file.originalname.split('.')[0]}`,
+                tags: ['safeed', 'educational', 'institution'],
+                context: {
+                    alt: req.body.title || req.file.originalname,
+                    caption: req.body.description || 'Educational video'
+                }
+            });
+
+            // Clean up local file
+            cleanupLocalFile(req.file.path);
+
+            if (!uploadResult.success) {
+                return res.status(500).json({ 
+                    message: 'Failed to upload video to Cloudinary',
+                    error: uploadResult.error 
+                });
+            }
+
+            console.log('✅ Video uploaded successfully:', uploadResult.publicId);
+
+            res.json({
+                message: 'Video uploaded successfully',
+                video: {
+                    url: uploadResult.url,
+                    optimizedUrl: uploadResult.optimizedUrl,
+                    thumbnailUrl: uploadResult.thumbnailUrl,
+                    publicId: uploadResult.publicId,
+                    duration: uploadResult.duration,
+                    size: uploadResult.size,
+                    width: uploadResult.width,
+                    height: uploadResult.height,
+                    format: uploadResult.format,
+                    uploadedAt: uploadResult.createdAt
+                }
+            });
+        } catch (error) {
+            // Clean up local file in case of error
+            if (req.file && req.file.path) {
+                cleanupLocalFile(req.file.path);
+            }
+            
+            console.error('❌ Video upload failed:', error);
+            res.status(500).json({ 
+                message: 'Upload failed',
+                error: error.message 
+            });
+        }
+    }
+);
+
+// Upload video from URL (for migrating YouTube URLs)
+router.post('/institution/upload-video-from-url', 
+    authMiddleware, 
+    institutionOnly, 
+    async (req, res) => {
+        try {
+            const { videoUrl, title, description } = req.body;
+
+            if (!videoUrl) {
+                return res.status(400).json({ message: 'Video URL is required' });
+            }
+
+            console.log('📹 Uploading video from URL to Cloudinary:', videoUrl);
+
+            const uploadResult = await uploadVideoFromUrl(videoUrl, {
+                public_id: `video_${Date.now()}_${title?.replace(/[^a-zA-Z0-9]/g, '_') || 'imported'}`,
+                tags: ['safeed', 'educational', 'imported'],
+                context: {
+                    alt: title || 'Imported video',
+                    caption: description || 'Educational video'
+                }
+            });
+
+            if (!uploadResult.success) {
+                return res.status(500).json({ 
+                    message: 'Failed to upload video from URL',
+                    error: uploadResult.error 
+                });
+            }
+
+            console.log('✅ Video from URL uploaded successfully:', uploadResult.publicId);
+
+            res.json({
+                message: 'Video uploaded successfully from URL',
+                video: {
+                    url: uploadResult.url,
+                    publicId: uploadResult.publicId,
+                    duration: uploadResult.duration,
+                    size: uploadResult.size,
+                    width: uploadResult.width,
+                    height: uploadResult.height
+                }
+            });
+        } catch (error) {
+            console.error('❌ Video URL upload failed:', error);
+            res.status(500).json({ 
+                message: 'Upload from URL failed',
+                error: error.message 
+            });
+        }
+    }
+);
+
+// Delete video from Cloudinary
+router.delete('/institution/video/:publicId', 
+    authMiddleware, 
+    institutionOnly, 
+    async (req, res) => {
+        try {
+            const { publicId } = req.params;
+            
+            console.log('🗑️ Deleting video from Cloudinary:', publicId);
+            
+            const deleteResult = await deleteVideo(publicId);
+            
+            if (!deleteResult.success) {
+                return res.status(500).json({ 
+                    message: 'Failed to delete video',
+                    error: deleteResult.error 
+                });
+            }
+            
+            console.log('✅ Video deleted successfully:', publicId);
+            
+            res.json({
+                message: 'Video deleted successfully',
+                publicId,
+                result: deleteResult.result
+            });
+        } catch (error) {
+            console.error('❌ Video deletion failed:', error);
+            res.status(500).json({ 
+                message: 'Delete failed',
+                error: error.message 
+            });
+        }
+    }
+);
+
+// Get video details from Cloudinary
+router.get('/institution/video/:publicId', 
+    authMiddleware, 
+    institutionOnly, 
+    async (req, res) => {
+        try {
+            const { publicId } = req.params;
+            const { getVideoDetails } = require('../utils/uploadVideo');
+            
+            const videoDetails = await getVideoDetails(publicId);
+            
+            if (!videoDetails.success) {
+                return res.status(404).json({ 
+                    message: 'Video not found',
+                    error: videoDetails.error 
+                });
+            }
+            
+            res.json({
+                message: 'Video details retrieved successfully',
+                video: videoDetails.video
+            });
+        } catch (error) {
+            res.status(500).json({ 
+                message: 'Failed to get video details',
+                error: error.message 
+            });
+        }
+    }
+);
+
+// Batch migrate YouTube URLs to Cloudinary
+router.post('/institution/migrate-youtube-videos', 
+    authMiddleware, 
+    institutionOnly, 
+    async (req, res) => {
+        try {
+            const { moduleId } = req.body;
+            
+            if (!moduleId) {
+                return res.status(400).json({ message: 'Module ID is required' });
+            }
+            
+            const module = await Module.findById(moduleId);
+            if (!module) {
+                return res.status(404).json({ message: 'Module not found' });
+            }
+            
+            console.log('🔄 Starting YouTube to Cloudinary migration for module:', module.title);
+            
+            let migratedCount = 0;
+            let errors = [];
+            
+            // Process each chapter
+            for (let chapterIndex = 0; chapterIndex < module.chapters.length; chapterIndex++) {
+                const chapter = module.chapters[chapterIndex];
+                
+                // Process each content item
+                for (let contentIndex = 0; contentIndex < chapter.contents.length; contentIndex++) {
+                    const content = chapter.contents[contentIndex];
+                    
+                    // Check if it's a video with YouTube URL
+                    if (content.type === 'video' && content.videoUrl && content.videoUrl.includes('youtube.com')) {
+                        try {
+                            console.log(`📹 Migrating video: ${content.videoUrl}`);
+                            
+                            const uploadResult = await uploadVideoFromUrl(content.videoUrl, {
+                                public_id: `migrated_${Date.now()}_${chapterIndex}_${contentIndex}`,
+                                tags: ['safeed', 'educational', 'migrated'],
+                                context: {
+                                    alt: `${chapter.title} - Video content`,
+                                    caption: `Educational video from ${chapter.title}`
+                                }
+                            });
+                            
+                            if (uploadResult.success) {
+                                // Update the content with new Cloudinary URL
+                                module.chapters[chapterIndex].contents[contentIndex].videoUrl = uploadResult.url;
+                                module.chapters[chapterIndex].contents[contentIndex].videoMetadata = {
+                                    publicId: uploadResult.publicId,
+                                    duration: uploadResult.duration,
+                                    width: uploadResult.width,
+                                    height: uploadResult.height,
+                                    size: uploadResult.size,
+                                    uploadedAt: new Date()
+                                };
+                                
+                                migratedCount++;
+                                console.log(`✅ Migrated video ${migratedCount}: ${uploadResult.publicId}`);
+                            } else {
+                                errors.push({
+                                    chapter: chapter.title,
+                                    contentIndex,
+                                    originalUrl: content.videoUrl,
+                                    error: uploadResult.error
+                                });
+                            }
+                        } catch (error) {
+                            errors.push({
+                                chapter: chapter.title,
+                                contentIndex,
+                                originalUrl: content.videoUrl,
+                                error: error.message
+                            });
+                        }
+                    }
+                }
+            }
+            
+            // Save the updated module
+            if (migratedCount > 0) {
+                await module.save();
+                console.log(`💾 Saved module with ${migratedCount} migrated videos`);
+            }
+            
+            res.json({
+                message: `Migration completed. ${migratedCount} videos migrated successfully.`,
+                migratedCount,
+                totalErrors: errors.length,
+                errors: errors.slice(0, 5) // Return first 5 errors only
+            });
+            
+        } catch (error) {
+            console.error('❌ Migration failed:', error);
+            res.status(500).json({ 
+                message: 'Migration failed',
+                error: error.message 
+            });
+        }
+    }
+);
 
 module.exports = router;

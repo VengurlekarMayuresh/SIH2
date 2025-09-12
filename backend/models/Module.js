@@ -14,6 +14,17 @@ const contentSchema = new mongoose.Schema({
         type: String,
         required: function() { return this.type === 'video'; },
     },
+    videoMetadata: {
+        publicId: String,
+        duration: Number,
+        width: Number,
+        height: Number,
+        size: Number,
+        format: String,
+        thumbnailUrl: String,
+        optimizedUrl: String,
+        uploadedAt: { type: Date, default: Date.now }
+    },
     imageUrl: {
         type: String,
         required: function() { return this.type === 'image'; },

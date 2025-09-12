@@ -8,7 +8,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import Sidebar from "@/components/Sidebar";
+import ResponsiveLayout from "@/components/ResponsiveLayout";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Clock,
   Target,
@@ -92,6 +93,17 @@ interface QuizStats {
 const QuizOverview = () => {
   const { quizId } = useParams();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  
+  // Get user data for navbar
+  const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+  
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userData');
+    localStorage.removeItem('userType');
+    navigate('/');
+  };
 
   // Check authentication
   useEffect(() => {
@@ -122,7 +134,7 @@ const QuizOverview = () => {
         setLoading(true);
         
         // Fetch quiz details
-        const quizResponse = await fetch(`http://localhost:5001/api/quizzes/${quizId}`, {
+        const quizResponse = await fetch(`/api/quizzes/${quizId}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
             'Content-Type': 'application/json'
@@ -137,7 +149,7 @@ const QuizOverview = () => {
         setQuiz(quizData);
 
         // Fetch student's attempts
-        const attemptsResponse = await fetch(`http://localhost:5001/api/student/quiz/attempts?quizId=${quizId}`, {
+        const attemptsResponse = await fetch(`/api/student/quiz/attempts?quizId=${quizId}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
             'Content-Type': 'application/json'
@@ -182,7 +194,7 @@ const QuizOverview = () => {
       setStartingQuiz(true);
       
       // Start quiz attempt
-      const response = await fetch('http://localhost:5001/api/student/quiz/start', {
+      const response = await fetch('/api/student/quiz/start', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
@@ -247,49 +259,62 @@ const QuizOverview = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex">
-        <Sidebar />
-        <main className="flex-1 p-6">
-          <div className="max-w-6xl mx-auto space-y-6">
-            <Skeleton className="h-8 w-64" />
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-8">
-              <Skeleton className="h-8 w-96 mb-4 bg-white/20" />
-              <Skeleton className="h-4 w-full max-w-2xl bg-white/20" />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[...Array(4)].map((_, i) => (
-                <Card key={i}>
-                  <CardContent className="p-6">
-                    <Skeleton className="h-12 w-12 rounded-full mb-4" />
-                    <Skeleton className="h-6 w-16 mb-2" />
-                    <Skeleton className="h-4 w-24" />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+      <ResponsiveLayout 
+        title="Quiz Overview"
+        user={userData?.name ? {
+          name: userData.name,
+          email: userData.email,
+          type: 'student'
+        } : undefined}
+        onLogout={handleLogout}
+      >
+        <div className="space-y-6">
+          <Skeleton className="h-8 w-64" />
+          <div className="bg-gradient-to-r from-primary to-secondary rounded-xl p-6 md:p-8">
+            <Skeleton className="h-8 w-full max-w-96 mb-4 bg-white/20" />
+            <Skeleton className="h-4 w-full max-w-2xl bg-white/20" />
           </div>
-        </main>
-      </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i}>
+                <CardContent className="p-4 md:p-6">
+                  <Skeleton className="h-12 w-12 rounded-full mb-4" />
+                  <Skeleton className="h-6 w-16 mb-2" />
+                  <Skeleton className="h-4 w-24" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </ResponsiveLayout>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex">
-        <Sidebar />
-        <main className="flex-1 p-6">
-          <div className="max-w-4xl mx-auto">
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-            <Button onClick={() => navigate(-1)} className="mt-4">
+      <ResponsiveLayout 
+        title="Quiz Overview"
+        user={userData?.name ? {
+          name: userData.name,
+          email: userData.email,
+          type: 'student'
+        } : undefined}
+        onLogout={handleLogout}
+      >
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="text-center max-w-md">
+            <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="h-8 w-8 text-destructive" />
+            </div>
+            <h2 className="text-xl md:text-2xl font-semibold text-foreground mb-2">Unable to Load Quiz</h2>
+            <p className="text-muted-foreground mb-4 text-sm md:text-base">{error}</p>
+            <Button onClick={() => navigate(-1)}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Go Back
             </Button>
           </div>
-        </main>
-      </div>
+        </div>
+      </ResponsiveLayout>
     );
   }
 
@@ -299,256 +324,265 @@ const QuizOverview = () => {
   const totalPoints = quiz.questions.reduce((sum, q) => sum + q.points, 0);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar />
-      <main className="flex-1 p-6">
-        <div className="max-w-6xl mx-auto space-y-6">
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <button onClick={() => navigate(`/modules/${quiz.moduleId._id}`)} className="hover:text-blue-600">
-              {quiz.moduleId.title}
-            </button>
-            <span>/</span>
-            <span className="text-gray-900">{quiz.title}</span>
-          </div>
+    <ResponsiveLayout 
+      title={quiz.title}
+      user={userData?.name ? {
+        name: userData.name,
+        email: userData.email,
+        type: 'student'
+      } : undefined}
+      onLogout={handleLogout}
+    >
+      <div className="space-y-6">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <button 
+            onClick={() => navigate(`/modules/${quiz.moduleId._id}`)} 
+            className="hover:text-primary transition-colors"
+          >
+            {quiz.moduleId.title}
+          </button>
+          <span>/</span>
+          <span className="text-foreground">{quiz.title}</span>
+        </div>
 
-          {/* Hero Banner */}
-          <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 rounded-xl p-8 text-white relative overflow-hidden">
-            <div className="absolute inset-0 bg-black/10"></div>
-            <div className="relative z-10">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Badge className="bg-white/20 text-white border-white/30">
-                      <BookOpen className="h-4 w-4 mr-1" />
-                      {quiz.moduleId.title}
-                    </Badge>
-                    <Badge className={`${getDifficultyColor(overallDifficulty)} text-opacity-100`}>
-                      {overallDifficulty}
-                    </Badge>
-                  </div>
-                  
-                  <h1 className="text-4xl font-bold mb-4">{quiz.title}</h1>
-                  <p className="text-xl text-blue-100 max-w-3xl leading-relaxed">
-                    {quiz.description}
-                  </p>
-
-                  {stats && stats.bestScore !== null && (
-                    <div className="mt-6 flex items-center gap-4">
-                      <div className="flex items-center gap-2 bg-white/20 rounded-full px-4 py-2">
-                        <Trophy className="h-5 w-5 text-yellow-300" />
-                        <span className="font-semibold">Best: {stats.bestScore}%</span>
-                      </div>
-                      <div className="flex items-center gap-2 bg-white/20 rounded-full px-4 py-2">
-                        <Target className="h-5 w-5" />
-                        <span>Attempts: {stats.totalAttempts}/{quiz.settings.maxAttempts}</span>
-                      </div>
-                    </div>
-                  )}
+        {/* Hero Banner */}
+        <div className="bg-gradient-to-r from-primary via-secondary to-accent rounded-xl p-6 md:p-8 text-white relative overflow-hidden">
+          <div className="absolute inset-0 bg-black/10"></div>
+          <div className="relative z-10">
+            <div className="flex flex-col lg:flex-row items-start justify-between gap-6">
+              <div className="flex-1">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
+                  <Badge className="bg-white/20 text-white border-white/30">
+                    <BookOpen className="h-4 w-4 mr-1" />
+                    {quiz.moduleId.title}
+                  </Badge>
+                  <Badge className={`${getDifficultyColor(overallDifficulty)} text-opacity-100`}>
+                    {overallDifficulty}
+                  </Badge>
                 </div>
+                
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4">{quiz.title}</h1>
+                <p className="text-base md:text-lg lg:text-xl text-primary-foreground/90 max-w-3xl leading-relaxed">
+                  {quiz.description}
+                </p>
 
-                <div className="hidden lg:block">
-                  <div className="w-32 h-32 bg-white/20 rounded-full flex items-center justify-center">
-                    <BookOpen className="h-16 w-16 text-white/80" />
+                {stats && stats.bestScore !== null && (
+                  <div className="mt-6 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <div className="flex items-center gap-2 bg-white/20 rounded-full px-3 py-2 text-sm">
+                      <Trophy className="h-4 w-4 text-yellow-300" />
+                      <span className="font-semibold">Best: {stats.bestScore}%</span>
+                    </div>
+                    <div className="flex items-center gap-2 bg-white/20 rounded-full px-3 py-2 text-sm">
+                      <Target className="h-4 w-4" />
+                      <span>Attempts: {stats.totalAttempts}/{quiz.settings.maxAttempts}</span>
+                    </div>
                   </div>
+                )}
+              </div>
+
+              <div className="hidden lg:block">
+                <div className="w-24 h-24 lg:w-32 lg:h-32 bg-white/20 rounded-full flex items-center justify-center">
+                  <BookOpen className="h-12 w-12 lg:h-16 lg:w-16 text-white/80" />
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Quiz Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Clock className="h-6 w-6 text-blue-600" />
+        {/* Quiz Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardContent className="p-4 md:p-6 text-center">
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4">
+                <Clock className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+              </div>
+              <div className="text-xl md:text-2xl font-bold text-foreground mb-1">
+                {quiz.settings.timeLimit} min
+              </div>
+              <p className="text-muted-foreground text-xs md:text-sm">Time Limit</p>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardContent className="p-4 md:p-6 text-center">
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4">
+                <Target className="h-5 w-5 md:h-6 md:w-6 text-green-600" />
+              </div>
+              <div className="text-xl md:text-2xl font-bold text-foreground mb-1">
+                {quiz.settings.passingScore}%
+              </div>
+              <p className="text-muted-foreground text-xs md:text-sm">Passing Score</p>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardContent className="p-4 md:p-6 text-center">
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4">
+                <BookOpen className="h-5 w-5 md:h-6 md:w-6 text-purple-600" />
+              </div>
+              <div className="text-xl md:text-2xl font-bold text-foreground mb-1">
+                {quiz.questions.length}
+              </div>
+              <p className="text-muted-foreground text-xs md:text-sm">Questions</p>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardContent className="p-4 md:p-6 text-center">
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-yellow-100 dark:bg-yellow-900/20 rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4">
+                <Star className="h-5 w-5 md:h-6 md:w-6 text-yellow-600" />
+              </div>
+              <div className="text-xl md:text-2xl font-bold text-foreground mb-1">
+                {totalPoints}
+              </div>
+              <p className="text-muted-foreground text-xs md:text-sm">Total Points</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Quiz Details */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Instructions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Lightbulb className="h-5 w-5 text-primary" />
+                  Quiz Instructions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div key="time-management" className="flex items-center gap-3 p-3 bg-primary/5 dark:bg-primary/10 rounded-lg">
+                      <Timer className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-medium text-foreground">Time Management</p>
+                        <p className="text-sm text-muted-foreground">You have {quiz.settings.timeLimit} minutes to complete</p>
+                      </div>
+                    </div>
+
+                    <div key="attempts" className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                      <RefreshCw className="h-5 w-5 text-green-600" />
+                      <div>
+                        <p className="font-medium text-foreground">Attempts</p>
+                        <p className="text-sm text-muted-foreground">Up to {quiz.settings.maxAttempts} attempts allowed</p>
+                      </div>
+                    </div>
+
+                    <div key="passing-grade" className="flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                      <CheckCircle2 className="h-5 w-5 text-purple-600" />
+                      <div>
+                        <p className="font-medium text-foreground">Passing Grade</p>
+                        <p className="text-sm text-muted-foreground">Score {quiz.settings.passingScore}% or higher to pass</p>
+                      </div>
+                    </div>
+
+                    <div key="auto-save" className="flex items-center gap-3 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                      <Zap className="h-5 w-5 text-orange-600" />
+                      <div>
+                        <p className="font-medium text-foreground">Auto-Save</p>
+                        <p className="text-sm text-muted-foreground">Progress is saved automatically</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-border">
+                    <h4 className="font-semibold mb-2 text-foreground">Additional Rules:</h4>
+                    <ul className="space-y-1 text-sm text-muted-foreground">
+                      <li>• {quiz.settings.randomizeQuestions ? 'Questions will be randomized' : 'Questions appear in set order'}</li>
+                      <li>• {quiz.settings.randomizeOptions ? 'Answer options will be shuffled' : 'Answer options are in fixed order'}</li>
+                      <li>• {quiz.settings.showCorrectAnswers ? 'Correct answers shown after submission' : 'Answers not revealed immediately'}</li>
+                      <li>• Once submitted, you cannot change your answers</li>
+                      <li>• Make sure you have a stable internet connection</li>
+                    </ul>
+                  </div>
                 </div>
-                <div className="text-2xl font-bold text-gray-900 mb-1">
-                  {quiz.settings.timeLimit} min
-                </div>
-                <p className="text-gray-600 text-sm">Time Limit</p>
               </CardContent>
             </Card>
 
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Target className="h-6 w-6 text-green-600" />
+            {/* Question Breakdown */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-green-600" />
+                  Question Breakdown
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {['easy', 'medium', 'hard'].map(difficulty => {
+                    const count = quiz.questions.filter(q => q.difficulty === difficulty).length;
+                    const percentage = (count / quiz.questions.length) * 100;
+                    
+                    if (count === 0) return null;
+                    
+                    return (
+                      <div key={difficulty} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge className={getDifficultyColor(difficulty)}>
+                              {difficulty}
+                            </Badge>
+                            <span className="text-sm text-muted-foreground">{count} questions</span>
+                          </div>
+                          <span className="text-sm font-medium text-foreground">{percentage.toFixed(0)}%</span>
+                        </div>
+                        <Progress value={percentage} className="h-2" />
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="text-2xl font-bold text-gray-900 mb-1">
-                  {quiz.settings.passingScore}%
-                </div>
-                <p className="text-gray-600 text-sm">Passing Score</p>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <BookOpen className="h-6 w-6 text-purple-600" />
-                </div>
-                <div className="text-2xl font-bold text-gray-900 mb-1">
-                  {quiz.questions.length}
-                </div>
-                <p className="text-gray-600 text-sm">Questions</p>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Star className="h-6 w-6 text-yellow-600" />
-                </div>
-                <div className="text-2xl font-bold text-gray-900 mb-1">
-                  {totalPoints}
-                </div>
-                <p className="text-gray-600 text-sm">Total Points</p>
               </CardContent>
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Quiz Details */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Instructions */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Lightbulb className="h-5 w-5 text-blue-600" />
-                    Quiz Instructions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-                        <Timer className="h-5 w-5 text-blue-600" />
-                        <div>
-                          <p className="font-medium text-blue-900">Time Management</p>
-                          <p className="text-sm text-blue-700">You have {quiz.settings.timeLimit} minutes to complete</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-                        <RefreshCw className="h-5 w-5 text-green-600" />
-                        <div>
-                          <p className="font-medium text-green-900">Attempts</p>
-                          <p className="text-sm text-green-700">Up to {quiz.settings.maxAttempts} attempts allowed</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg">
-                        <CheckCircle2 className="h-5 w-5 text-purple-600" />
-                        <div>
-                          <p className="font-medium text-purple-900">Passing Grade</p>
-                          <p className="text-sm text-purple-700">Score {quiz.settings.passingScore}% or higher to pass</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg">
-                        <Zap className="h-5 w-5 text-orange-600" />
-                        <div>
-                          <p className="font-medium text-orange-900">Auto-Save</p>
-                          <p className="text-sm text-orange-700">Progress is saved automatically</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="pt-4 border-t">
-                      <h4 className="font-semibold mb-2">Additional Rules:</h4>
-                      <ul className="space-y-1 text-sm text-gray-600">
-                        <li>• {quiz.settings.randomizeQuestions ? 'Questions will be randomized' : 'Questions appear in set order'}</li>
-                        <li>• {quiz.settings.randomizeOptions ? 'Answer options will be shuffled' : 'Answer options are in fixed order'}</li>
-                        <li>• {quiz.settings.showCorrectAnswers ? 'Correct answers shown after submission' : 'Answers not revealed immediately'}</li>
-                        <li>• Once submitted, you cannot change your answers</li>
-                        <li>• Make sure you have a stable internet connection</li>
-                      </ul>
-                    </div>
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Start Quiz Card */}
+            <Card className="border-2 border-primary/20 bg-primary/5">
+              <CardContent className="p-4 md:p-6 text-center">
+                <div className="mb-4">
+                  <div className="w-12 h-12 md:w-16 md:h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <PlayCircle className="h-6 w-6 md:h-8 md:w-8 text-primary" />
                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Question Breakdown */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-green-600" />
-                    Question Breakdown
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {['easy', 'medium', 'hard'].map(difficulty => {
-                      const count = quiz.questions.filter(q => q.difficulty === difficulty).length;
-                      const percentage = (count / quiz.questions.length) * 100;
-                      
-                      if (count === 0) return null;
-                      
-                      return (
-                        <div key={difficulty} className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Badge className={getDifficultyColor(difficulty)}>
-                                {difficulty}
-                              </Badge>
-                              <span className="text-sm text-gray-600">{count} questions</span>
-                            </div>
-                            <span className="text-sm font-medium">{percentage.toFixed(0)}%</span>
-                          </div>
-                          <Progress value={percentage} className="h-2" />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Sidebar */}
-            <div className="space-y-6">
-              {/* Start Quiz Card */}
-              <Card className="border-2 border-blue-200 bg-blue-50">
-                <CardContent className="p-6 text-center">
-                  <div className="mb-4">
-                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <PlayCircle className="h-8 w-8 text-blue-600" />
-                    </div>
-                    <h3 className="font-bold text-lg text-blue-900 mb-2">Ready to Start?</h3>
-                    {stats && !stats.canAttempt ? (
-                      <Alert className="mb-4">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertDescription>
-                          You have used all {quiz.settings.maxAttempts} attempts for this quiz.
-                        </AlertDescription>
-                      </Alert>
-                    ) : (
-                      <p className="text-blue-700 text-sm mb-4">
-                        {stats && stats.totalAttempts > 0 
-                          ? `This will be attempt ${stats.totalAttempts + 1} of ${quiz.settings.maxAttempts}`
-                          : 'Take your first attempt at this quiz'
-                        }
-                      </p>
-                    )}
+                  <h3 className="font-bold text-base md:text-lg text-foreground mb-2">Ready to Start?</h3>
+                  {stats && !stats.canAttempt ? (
+                    <Alert className="mb-4">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        You have used all {quiz.settings.maxAttempts} attempts for this quiz.
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <p className="text-muted-foreground text-sm mb-4">
+                      {stats && stats.totalAttempts > 0 
+                        ? `This will be attempt ${stats.totalAttempts + 1} of ${quiz.settings.maxAttempts}`
+                        : 'Take your first attempt at this quiz'
+                      }
+                    </p>
+                  )}
                   </div>
 
-                  <Dialog open={showStartModal} onOpenChange={setShowStartModal}>
-                    <DialogTrigger asChild>
-                      <Button 
-                        className="w-full mb-3" 
-                        size="lg"
-                        disabled={stats && !stats.canAttempt}
-                      >
-                        <PlayCircle className="h-5 w-5 mr-2" />
-                        {stats && stats.totalAttempts > 0 ? 'Retake Quiz' : 'Start Quiz'}
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Start Quiz Attempt</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <p>Are you ready to start "{quiz.title}"?</p>
-                        <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                <Dialog open={showStartModal} onOpenChange={setShowStartModal}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      className="w-full mb-3" 
+                      size={isMobile ? "default" : "lg"}
+                      disabled={stats && !stats.canAttempt}
+                    >
+                      <PlayCircle className="h-4 w-4 md:h-5 md:w-5 mr-2" />
+                      {stats && stats.totalAttempts > 0 ? 'Retake Quiz' : 'Start Quiz'}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Start Quiz Attempt</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <p>Are you ready to start "{quiz.title}"?</p>
+                      <div className="bg-muted p-4 rounded-lg space-y-2">
                           <div className="flex justify-between">
                             <span>Time Limit:</span>
                             <span className="font-medium">{quiz.settings.timeLimit} minutes</span>
@@ -580,94 +614,95 @@ const QuizOverview = () => {
                     </DialogContent>
                   </Dialog>
 
-                  <div className="space-y-2">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => navigate(`/quiz/${quiz._id}/leaderboard`)}
-                      className="w-full"
-                    >
-                      <Users className="h-4 w-4 mr-2" />
-                      View Leaderboard
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      onClick={() => navigate(`/modules/${quiz.moduleId._id}`)}
-                      className="w-full"
-                    >
-                      <ArrowLeft className="h-4 w-4 mr-2" />
-                      Back to Module
-                    </Button>
+                <div className="space-y-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => navigate(`/quiz/${quiz._id}/leaderboard`)}
+                    className="w-full"
+                    size={isMobile ? "sm" : "default"}
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    View Leaderboard
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => navigate(`/modules/${quiz.moduleId._id}`)}
+                    className="w-full"
+                    size={isMobile ? "sm" : "default"}
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back to Module
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Performance History */}
+            {stats && stats.totalAttempts > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-purple-600" />
+                    Your Performance
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                        <div className="text-xl md:text-2xl font-bold text-green-600">
+                          {stats.bestScore}%
+                        </div>
+                        <p className="text-xs text-green-700 dark:text-green-400">Best Score</p>
+                      </div>
+                      <div className="text-center p-3 bg-primary/5 rounded-lg">
+                        <div className="text-xl md:text-2xl font-bold text-primary">
+                          {stats.averageScore?.toFixed(0)}%
+                        </div>
+                        <p className="text-xs text-primary/70">Average</p>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <h4 className="font-medium mb-2 text-foreground">Recent Attempts</h4>
+                      <div className="space-y-2">
+                        {attempts.slice(0, 3).map((attempt, index) => (
+                          <div key={attempt._id} className="flex items-center justify-between p-2 bg-muted rounded">
+                            <div className="flex items-center gap-2">
+                              {index === 0 && attempt.score.percentage === stats.bestScore && (
+                                <Crown className="h-4 w-4 text-yellow-500" />
+                              )}
+                              <span className="text-sm text-foreground">Attempt {attempt.attemptNumber}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge className={
+                                attempt.score.passed 
+                                  ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' 
+                                  : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                              }>
+                                {attempt.score.percentage}%
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {stats.lastAttemptDate && (
+                      <p className="text-xs text-muted-foreground">
+                        Last attempt: {formatDate(stats.lastAttemptDate)}
+                      </p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
-
-              {/* Performance History */}
-              {stats && stats.totalAttempts > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5 text-purple-600" />
-                      Your Performance
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center p-3 bg-green-50 rounded-lg">
-                          <div className="text-2xl font-bold text-green-600">
-                            {stats.bestScore}%
-                          </div>
-                          <p className="text-xs text-green-700">Best Score</p>
-                        </div>
-                        <div className="text-center p-3 bg-blue-50 rounded-lg">
-                          <div className="text-2xl font-bold text-blue-600">
-                            {stats.averageScore?.toFixed(0)}%
-                          </div>
-                          <p className="text-xs text-blue-700">Average</p>
-                        </div>
-                      </div>
-
-                      <Separator />
-
-                      <div>
-                        <h4 className="font-medium mb-2">Recent Attempts</h4>
-                        <div className="space-y-2">
-                          {attempts.slice(0, 3).map((attempt, index) => (
-                            <div key={attempt._id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                              <div className="flex items-center gap-2">
-                                {index === 0 && attempt.score.percentage === stats.bestScore && (
-                                  <Crown className="h-4 w-4 text-yellow-500" />
-                                )}
-                                <span className="text-sm">Attempt {attempt.attemptNumber}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Badge className={
-                                  attempt.score.passed 
-                                    ? 'bg-green-100 text-green-800' 
-                                    : 'bg-red-100 text-red-800'
-                                }>
-                                  {attempt.score.percentage}%
-                                </Badge>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {stats.lastAttemptDate && (
-                        <p className="text-xs text-gray-500">
-                          Last attempt: {formatDate(stats.lastAttemptDate)}
-                        </p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+            )}
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </ResponsiveLayout>
   );
 };
 

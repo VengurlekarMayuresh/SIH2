@@ -6,7 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import Sidebar from "@/components/Sidebar";
+import ResponsiveLayout from "@/components/ResponsiveLayout";
+import { useIsMobile } from "@/hooks/use-mobile";
 import axios from "axios";
 import { 
   BookOpen, 
@@ -64,6 +65,7 @@ interface DashboardData {
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [userData, setUserData] = useState<any>(null);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -203,29 +205,38 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-      
-      <main className="flex-1 p-8">
-        <div className="max-w-6xl mx-auto">
+    <ResponsiveLayout
+      user={userData ? {
+        name: userData.name,
+        email: userData.email,
+        type: 'student'
+      } : undefined}
+      onLogout={handleLogout}
+      notifications={3}
+      maxWidth="2xl"
+    >
           {/* Header with User Profile */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16 border-2 border-primary/20">
+          <div className="mb-6 md:mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <div className="flex items-center gap-3 md:gap-4">
+                <Avatar className="h-12 w-12 md:h-16 md:w-16 border-2 border-primary/20">
                   <AvatarImage src="/placeholder.svg" alt={userName} />
-                  <AvatarFallback className="bg-primary/10 text-primary font-semibold text-lg">
-                    <User className="h-8 w-8" />
+                  <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm md:text-lg">
+                    <User className="h-6 w-6 md:h-8 md:w-8" />
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h1 className="text-3xl font-bold text-foreground">Welcome back, {userName.split(' ')[0]}!</h1>
-                  <div className="flex items-center gap-3 mt-2">
-                    <Badge variant="secondary" className="font-medium">
-                      {userData?.class && `Class ${userData.class}`}
-                    </Badge>
+                  <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground">
+                    Welcome back, {userName.split(' ')[0]}!
+                  </h1>
+                  <div className="flex flex-wrap items-center gap-2 md:gap-3 mt-1 md:mt-2">
+                    {userData?.class && (
+                      <Badge variant="secondary" className="font-medium text-xs md:text-sm">
+                        Class {userData.class}
+                      </Badge>
+                    )}
                     {userData?.rollNo && (
-                      <Badge variant="outline" className="border-accent text-accent">
+                      <Badge variant="outline" className="border-accent text-accent text-xs md:text-sm">
                         Roll No: {userData.rollNo}
                       </Badge>
                     )}
@@ -233,17 +244,15 @@ const Dashboard = () => {
                 </div>
               </div>
               
-              <div className="flex items-center gap-3">
-                <Button variant="outline" size="sm" className="relative">
-                  <Bell className="h-4 w-4 mr-1" />
-                  Notifications
-                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-secondary rounded-full"></div>
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleLogout}>
-                  <LogOut className="h-4 w-4 mr-1" />
-                  Logout
-                </Button>
-              </div>
+              {!isMobile && (
+                <div className="flex items-center gap-3">
+                  <Button variant="outline" size="sm" className="relative">
+                    <Bell className="h-4 w-4 mr-1" />
+                    Notifications
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-secondary rounded-full"></div>
+                  </Button>
+                </div>
+              )}
             </div>
             
             {/* Daily Progress */}
@@ -307,14 +316,16 @@ const Dashboard = () => {
 
 
           {/* Enhanced Quick Actions */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-semibold text-foreground">Continue Learning</h2>
-              <Button variant="ghost" size="sm" className="text-primary hover:text-primary">
-                View All <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
+          <div className="mb-6 md:mb-8">
+            <div className="flex items-center justify-between mb-4 md:mb-6">
+              <h2 className="text-xl md:text-2xl font-semibold text-foreground">Continue Learning</h2>
+              {!isMobile && (
+                <Button variant="ghost" size="sm" className="text-primary hover:text-primary">
+                  View All <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              )}
             </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
               {quickActions.map((action, index) => (
                 <Card 
                   key={index} 
@@ -349,7 +360,7 @@ const Dashboard = () => {
 
 
           {/* Recent Activity & Next Badge */}
-          <div className="grid lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
             <Card className="lg:col-span-2">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -451,9 +462,7 @@ const Dashboard = () => {
               </Card>
             </div>
           </div>
-        </div>
-      </main>
-    </div>
+    </ResponsiveLayout>
   );
 };
 
