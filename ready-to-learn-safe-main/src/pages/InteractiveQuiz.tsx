@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Skeleton } from "@/components/ui/skeleton";
 import ResponsiveLayout from "@/components/ResponsiveLayout";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useProgressTracking } from "@/hooks/useProgressTracking";
 import { 
   Trophy, 
   Star, 
@@ -106,6 +107,12 @@ const InteractiveQuiz = () => {
   const { quizId, attemptId } = useParams();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { 
+    startTracking, 
+    stopTracking, 
+    trackQuizAttempt, 
+    trackEngagement 
+  } = useProgressTracking();
   
   // Get user data for navbar
   const userData = (() => {
@@ -228,6 +235,14 @@ const InteractiveQuiz = () => {
 
       const data = await response.json();
       setCurrentAttemptId(data.attemptId);
+      
+      // Start progress tracking
+      startTracking(quizData.moduleId, quizData._id);
+      trackEngagement('quiz_started', quizData._id, {
+        quizTitle: quizData.title,
+        questionsCount: quizData.questions.length,
+        timeLimit: quizData.settings.timeLimit
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start quiz');
     }
@@ -280,6 +295,13 @@ const InteractiveQuiz = () => {
             : [...current, optionId]
         };
       } else {
+        // Track answer selection
+        trackEngagement('answer_selected', questionId, {
+          questionIndex: currentQuestion + 1,
+          optionId,
+          timeOnQuestion: Math.floor((Date.now() - questionStartTime) / 1000)
+        });
+        
         return {
           ...prev,
           [questionId]: [optionId]
@@ -296,10 +318,18 @@ const InteractiveQuiz = () => {
   };
 
   const useHint = (questionId: string) => {
+    const newHintCount = (hintsUsed[questionId] || 0) + 1;
     setHintsUsed(prev => ({
       ...prev,
-      [questionId]: (prev[questionId] || 0) + 1
+      [questionId]: newHintCount
     }));
+    
+    // Track hint usage
+    trackEngagement('hint_used', questionId, {
+      questionIndex: currentQuestion + 1,
+      hintNumber: newHintCount,
+      timeOnQuestion: Math.floor((Date.now() - questionStartTime) / 1000)
+    });
   };
 
   const handleSubmitQuiz = async (timedOut = false) => {
@@ -357,6 +387,26 @@ const InteractiveQuiz = () => {
       console.log('Quiz submitted successfully:', result);
       setResult(result);
       setQuizCompleted(true);
+      
+      // Stop progress tracking
+      stopTracking();
+      
+      // Track quiz completion
+      trackQuizAttempt(
+        quizData._id, 
+        result.score.raw, 
+        result.score.percentage, 
+        result.timing.totalTimeSpent, 
+        answers.map(a => ({ ...a, correct: false })) // We don't have the correct answers here
+      );
+      
+      // Track quiz completion engagement
+      trackEngagement('quiz_completed', quizData._id, {
+        score: result.score.percentage,
+        passed: result.score.passed,
+        timeSpent: result.timing.totalTimeSpent,
+        badgesEarned: result.badges?.length || 0
+      });
 
       // Show badge modal if badges were earned
       if (result.badges && result.badges.length > 0) {
@@ -372,11 +422,27 @@ const InteractiveQuiz = () => {
 
   const nextQuestion = () => {
     if (!quizData || currentQuestion >= quizData.questions.length - 1) return;
+    
+    // Track question navigation
+    trackEngagement('question_next', quizData.questions[currentQuestion]._id, {
+      questionIndex: currentQuestion + 1,
+      timeOnQuestion: Math.floor((Date.now() - questionStartTime) / 1000)
+    });
+    
     setCurrentQuestion(prev => prev + 1);
   };
 
   const prevQuestion = () => {
     if (currentQuestion <= 0) return;
+    
+    // Track question navigation
+    if (quizData) {
+      trackEngagement('question_previous', quizData.questions[currentQuestion]._id, {
+        questionIndex: currentQuestion + 1,
+        timeOnQuestion: Math.floor((Date.now() - questionStartTime) / 1000)
+      });
+    }
+    
     setCurrentQuestion(prev => prev - 1);
   };
 
@@ -403,6 +469,13 @@ const InteractiveQuiz = () => {
       startQuizAttempt();
     }
   }, [quizData]);
+  
+  // Cleanup progress tracking on unmount
+  useEffect(() => {
+    return () => {
+      stopTracking();
+    };
+  }, [stopTracking]);
 
   if (loading) {
     return (

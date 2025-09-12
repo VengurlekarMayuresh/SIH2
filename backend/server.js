@@ -1,14 +1,20 @@
+// Load environment variables FIRST
+const dotenv = require('dotenv');
+dotenv.config();
+
+// Now import other modules
 const express = require('express');
 const connectDb = require('./config/database');
-const dotenv = require('dotenv');
 const cors = require('cors');
 const mongoose = require('mongoose');
+
+// Register all models to prevent MissingSchemaError
+require('./models');
 const institutionRouter = require('./routes/institution');
 const studentRouter = require('./routes/student');
 const modulesRouter = require('./routes/modules');
-
-// Load environment variables
-dotenv.config();
+const alertsRouter = require('./routes/alerts');
+const weatherRouter = require('./routes/weather');
 
 const app = express();
 
@@ -37,6 +43,8 @@ app.use(express.json());
 app.use('/api', institutionRouter);
 app.use('/api', studentRouter);
 app.use('/api', modulesRouter);
+app.use('/api', alertsRouter);
+app.use('/api', weatherRouter);
 
 // Health check
 app.get('/', (req, res) => {
@@ -49,7 +57,7 @@ app.get('/', (req, res) => {
 // Connect to database and start server
 connectDb()
     .then(() => {
-        const PORT = process.env.PORT || 5000;
+        const PORT = process.env.PORT || 5001;
         app.listen(PORT, () => {
             console.log(`🚀 Server running on port ${PORT}`);
             console.log(`📍 API URL: http://localhost:${PORT}/api`);

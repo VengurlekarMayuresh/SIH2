@@ -17,6 +17,7 @@ import Resources from "./pages/Resources";
 import Progress from "./pages/Progress";
 import Leaderboard from "./pages/Leaderboard";
 import BadgeCollection from "./pages/BadgeCollection";
+import WeatherSafety from "./pages/WeatherSafety";
 import NotFound from "./pages/NotFound";
 import AuthPage from "./pages/AuthPage";
 
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="/progress" element={<Progress />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/badges" element={<BadgeCollection />} />
+              <Route path="/weather-safety" element={<WeatherSafety />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>

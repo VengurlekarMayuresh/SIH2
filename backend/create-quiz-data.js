@@ -4,12 +4,12 @@ require('dotenv').config();
 const Module = require('./models/Module');
 const Quiz = require('./models/Quiz');
 
-const createQuizData = async () => {
+const createComprehensiveQuizData = async () => {
     try {
         await mongoose.connect(process.env.MONGODB_URI);
         console.log('🔗 Connected to MongoDB\n');
 
-        // Create test modules
+        // Create comprehensive modules for all disaster types
         const modules = [
             {
                 title: 'Earthquake Safety',
@@ -21,7 +21,7 @@ const createQuizData = async () => {
                         contents: [
                             {
                                 type: 'text',
-                                body: 'Earthquakes are sudden movements of the Earth\'s crust that can cause severe damage and loss of life.'
+                                body: 'Earthquakes are sudden movements of the Earth\'s crust that can cause severe damage and loss of life. India\'s Himalayan region is particularly vulnerable to seismic activity.'
                             }
                         ]
                     },
@@ -30,7 +30,7 @@ const createQuizData = async () => {
                         contents: [
                             {
                                 type: 'text',
-                                body: 'Preparation is key to surviving earthquakes. Create an emergency kit and plan escape routes.'
+                                body: 'Follow the Drop, Cover, and Hold On protocol. Preparation is key to surviving earthquakes - create an emergency kit and plan escape routes.'
                             }
                         ]
                     }
@@ -46,7 +46,23 @@ const createQuizData = async () => {
                         contents: [
                             {
                                 type: 'text',
-                                body: 'Floods can be caused by heavy rainfall, dam failures, or storm surges from hurricanes.'
+                                body: 'Floods can be caused by heavy rainfall, dam failures, or storm surges. Monsoon season brings significant flood risks to many Indian states.'
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                title: 'Cyclone and Storm Safety',
+                description: 'Cyclone preparedness and response strategies for coastal regions.',
+                thumbnail: '/images/cyclone-thumb.jpg',
+                chapters: [
+                    {
+                        title: 'Understanding Cyclones',
+                        contents: [
+                            {
+                                type: 'text',
+                                body: 'Cyclones primarily affect India\'s coastal regions, especially the eastern coast. They occur mainly from May to November.'
                             }
                         ]
                     }
@@ -54,15 +70,111 @@ const createQuizData = async () => {
             },
             {
                 title: 'Fire Safety',
-                description: 'Fire prevention, detection systems, and evacuation procedures for home and workplace safety.',
+                description: 'Fire prevention, detection systems, and evacuation procedures.',
                 thumbnail: '/images/fire-thumb.jpg',
                 chapters: [
                     {
-                        title: 'Fire Prevention',
+                        title: 'Fire Prevention and Response',
                         contents: [
                             {
                                 type: 'text',
-                                body: 'Most fires can be prevented by maintaining electrical systems and safe storage of flammable materials.'
+                                body: 'Fire safety involves prevention, early detection, and proper evacuation. Remember: Stop, Drop, and Roll if clothes catch fire.'
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                title: 'Crowd Safety and Stampede Prevention',
+                description: 'Managing crowds and preventing stampede situations.',
+                thumbnail: '/images/crowd-thumb.jpg',
+                chapters: [
+                    {
+                        title: 'Crowd Management',
+                        contents: [
+                            {
+                                type: 'text',
+                                body: 'Stampedes can occur in crowded situations. Stay calm, protect vital organs, and move with the crowd flow.'
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                title: 'Pandemic and Health Emergency Preparedness',
+                description: 'Understanding pandemics, prevention, and response measures.',
+                thumbnail: '/images/pandemic-thumb.jpg',
+                chapters: [
+                    {
+                        title: 'Pandemic Response',
+                        contents: [
+                            {
+                                type: 'text',
+                                body: 'Pandemics like COVID-19 require hygiene practices, vaccination, social distancing, and isolation when symptomatic.'
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                title: 'Cold Weather and Snow Safety',
+                description: 'Dealing with cold waves, snow, and avalanche risks.',
+                thumbnail: '/images/snow-thumb.jpg',
+                chapters: [
+                    {
+                        title: 'Cold Weather Safety',
+                        contents: [
+                            {
+                                type: 'text',
+                                body: 'Cold waves affect northern India. Kashmir and Himalayan regions face snow and avalanche risks during winter months.'
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                title: 'Road Safety',
+                description: 'Preventing road accidents and emergency response.',
+                thumbnail: '/images/road-thumb.jpg',
+                chapters: [
+                    {
+                        title: 'Road Accident Prevention',
+                        contents: [
+                            {
+                                type: 'text',
+                                body: 'Road safety involves following traffic rules, wearing safety gear, and avoiding distractions while driving.'
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                title: 'Landslide Safety',
+                description: 'Understanding landslide risks and prevention in hilly areas.',
+                thumbnail: '/images/landslide-thumb.jpg',
+                chapters: [
+                    {
+                        title: 'Landslide Prevention',
+                        contents: [
+                            {
+                                type: 'text',
+                                body: 'Landslides occur on slopes, especially during monsoons. Warning signs include cracks in soil and rocks.'
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                title: 'Lightning and Thunderstorm Safety',
+                description: 'Protection from lightning strikes and thunderstorm hazards.',
+                thumbnail: '/images/lightning-thumb.jpg',
+                chapters: [
+                    {
+                        title: 'Lightning Safety',
+                        contents: [
+                            {
+                                type: 'text',
+                                body: 'Lightning strikes tall objects and open areas. Stay indoors during thunderstorms and avoid water bodies.'
                             }
                         ]
                     }
@@ -70,7 +182,7 @@ const createQuizData = async () => {
             }
         ];
 
-        console.log('📚 Creating modules...');
+        console.log('📚 Creating comprehensive modules...');
         const createdModules = [];
         for (const moduleData of modules) {
             const existingModule = await Module.findOne({ title: moduleData.title });
@@ -85,50 +197,75 @@ const createQuizData = async () => {
             }
         }
 
-        // Create test quizzes
+        // Create comprehensive quizzes for all disaster types
         const quizzes = [
+            // Earthquake Quiz
             {
-                title: 'Earthquake Basics Quiz',
-                description: 'Test your knowledge about earthquake fundamentals and safety measures.',
+                title: 'Earthquake Safety Quiz',
+                description: 'Test your knowledge about earthquake safety and preparedness.',
                 moduleId: createdModules[0]._id,
-                difficulty: 'easy',
+                difficulty: 'medium',
                 status: 'published',
                 questions: [
                     {
-                        question: 'What should you do immediately when you feel an earthquake?',
+                        question: 'What is the safest action during an earthquake?',
                         options: [
                             { text: 'Run outside immediately', isCorrect: false },
-                            { text: 'Drop, Cover, and Hold On', isCorrect: true },
-                            { text: 'Stand in a doorway', isCorrect: false },
-                            { text: 'Hide under a bed', isCorrect: false }
+                            { text: 'Drop, Cover, Hold', isCorrect: true },
+                            { text: 'Stand near a window', isCorrect: false },
+                            { text: 'Climb a tree', isCorrect: false }
                         ],
-                        explanation: 'The safest immediate response is to Drop to hands and knees, take Cover under a desk or table, and Hold On until shaking stops.',
+                        explanation: 'Follow NDMA guidelines: Drop to hands and knees, take Cover under sturdy furniture, and Hold On.',
                         difficulty: 'easy',
                         points: 2
                     },
                     {
-                        question: 'Which of these items should be in your earthquake emergency kit?',
+                        question: 'Where should you avoid standing during an earthquake?',
                         options: [
-                            { text: 'Water for 3 days (1 gallon per person per day)', isCorrect: true },
-                            { text: 'Candles for lighting', isCorrect: false },
-                            { text: 'Glass containers for storage', isCorrect: false },
-                            { text: 'Heavy furniture', isCorrect: false }
+                            { text: 'Under furniture', isCorrect: false },
+                            { text: 'Near windows or heavy objects', isCorrect: true },
+                            { text: 'In a doorway', isCorrect: false },
+                            { text: 'On a carpet', isCorrect: false }
                         ],
-                        explanation: 'Water is essential - store at least 1 gallon per person per day for 3 days. Avoid candles (fire hazard) and glass containers.',
+                        explanation: 'Windows can shatter and heavy objects can fall during earthquakes.',
                         difficulty: 'easy',
                         points: 2
                     },
                     {
-                        question: 'After an earthquake stops, what should you do first?',
+                        question: 'Which area in India is most prone to earthquakes?',
                         options: [
-                            { text: 'Check for injuries and hazards', isCorrect: true },
-                            { text: 'Turn on all lights', isCorrect: false },
-                            { text: 'Use elevators to evacuate', isCorrect: false },
-                            { text: 'Move heavy furniture', isCorrect: false }
+                            { text: 'Himalayan region', isCorrect: true },
+                            { text: 'Thar Desert', isCorrect: false },
+                            { text: 'Kerala coast', isCorrect: false },
+                            { text: 'Rajasthan plains', isCorrect: false }
                         ],
-                        explanation: 'First priority is checking for injuries and immediate hazards like gas leaks or structural damage.',
+                        explanation: 'The Himalayan region is in a high seismic zone due to tectonic plate movement.',
+                        difficulty: 'easy',
+                        points: 2
+                    },
+                    {
+                        question: 'What should you do after shaking stops?',
+                        options: [
+                            { text: 'Resume class immediately', isCorrect: false },
+                            { text: 'Evacuate safely if needed', isCorrect: true },
+                            { text: 'Turn on electrical appliances', isCorrect: false },
+                            { text: 'Jump from building', isCorrect: false }
+                        ],
+                        explanation: 'Check safety first and evacuate only if the building is damaged or unsafe.',
                         difficulty: 'medium',
                         points: 3
+                    },
+                    {
+                        question: 'Why is it dangerous to stand near bookshelves during an earthquake?',
+                        options: [
+                            { text: 'They can topple and injure you', isCorrect: true },
+                            { text: 'They block your view', isCorrect: false },
+                            { text: 'They are dusty', isCorrect: false },
+                            { text: 'Nothing happens', isCorrect: false }
+                        ],
+                        explanation: 'Falling objects like bookshelves are a major cause of earthquake injuries.',
+                        difficulty: 'hard',
+                        points: 4
                     }
                 ],
                 settings: {
@@ -139,74 +276,243 @@ const createQuizData = async () => {
                     showCorrectAnswers: true
                 }
             },
+            // Flood Quiz
             {
-                title: 'Advanced Earthquake Preparedness',
-                description: 'Advanced topics in earthquake preparedness and response strategies.',
-                moduleId: createdModules[0]._id,
-                difficulty: 'hard',
-                status: 'published',
-                questions: [
-                    {
-                        question: 'What is the recommended way to secure heavy furniture to prevent earthquake damage?',
-                        options: [
-                            { text: 'Use duct tape to attach to walls', isCorrect: false },
-                            { text: 'Bolt or strap furniture to wall studs', isCorrect: true },
-                            { text: 'Place heavy items on top', isCorrect: false },
-                            { text: 'Move furniture to center of room', isCorrect: false }
-                        ],
-                        explanation: 'Heavy furniture should be bolted or strapped to wall studs to prevent tipping during shaking.',
-                        difficulty: 'hard',
-                        points: 4
-                    },
-                    {
-                        question: 'Which magnitude earthquake is typically the threshold for significant structural damage?',
-                        options: [
-                            { text: 'Magnitude 3.0', isCorrect: false },
-                            { text: 'Magnitude 5.0', isCorrect: false },
-                            { text: 'Magnitude 6.0', isCorrect: true },
-                            { text: 'Magnitude 8.0', isCorrect: false }
-                        ],
-                        explanation: 'Magnitude 6.0+ earthquakes can cause significant structural damage, especially in vulnerable buildings.',
-                        difficulty: 'hard',
-                        points: 4
-                    }
-                ],
-                settings: {
-                    timeLimit: 15,
-                    passingScore: 80,
-                    maxAttempts: 2,
-                    randomizeQuestions: true,
-                    showCorrectAnswers: true
-                }
-            },
-            {
-                title: 'Flood Safety Essentials',
-                description: 'Essential knowledge about flood preparedness and response.',
+                title: 'Flood Safety Quiz',
+                description: 'Learn about flood preparedness and emergency response.',
                 moduleId: createdModules[1]._id,
                 difficulty: 'medium',
                 status: 'published',
                 questions: [
                     {
-                        question: 'How deep does moving water need to be to knock down an adult?',
+                        question: 'What should you do during a flood?',
                         options: [
-                            { text: '2 feet', isCorrect: false },
-                            { text: '1 foot', isCorrect: false },
-                            { text: '6 inches', isCorrect: true },
-                            { text: '3 inches', isCorrect: false }
+                            { text: 'Move to higher ground', isCorrect: true },
+                            { text: 'Play in water', isCorrect: false },
+                            { text: 'Walk through deep water', isCorrect: false },
+                            { text: 'Stay near electrical lines', isCorrect: false }
                         ],
-                        explanation: 'Just 6 inches of moving water can knock down an adult. Never attempt to walk through moving flood water.',
+                        explanation: 'Moving to higher ground keeps you safe from rising water levels.',
+                        difficulty: 'easy',
+                        points: 2
+                    },
+                    {
+                        question: 'Which season in India is flood-prone?',
+                        options: [
+                            { text: 'Monsoon', isCorrect: true },
+                            { text: 'Winter', isCorrect: false },
+                            { text: 'Summer', isCorrect: false },
+                            { text: 'Spring', isCorrect: false }
+                        ],
+                        explanation: 'Heavy rains during monsoon season cause most floods in India.',
+                        difficulty: 'easy',
+                        points: 2
+                    },
+                    {
+                        question: 'Which Indian states are highly affected by floods?',
+                        options: [
+                            { text: 'Assam, Bihar, Kerala', isCorrect: true },
+                            { text: 'Rajasthan, Gujarat, Haryana', isCorrect: false },
+                            { text: 'Punjab, Himachal', isCorrect: false },
+                            { text: 'Tamil Nadu, Karnataka, Goa', isCorrect: false }
+                        ],
+                        explanation: 'These are low-lying, riverine states that experience frequent flooding.',
                         difficulty: 'medium',
                         points: 3
                     },
                     {
-                        question: 'What should you do if your car gets caught in flood water?',
+                        question: 'Why should you avoid swimming in floodwater?',
                         options: [
-                            { text: 'Try to drive through quickly', isCorrect: false },
-                            { text: 'Stay in the car and wait', isCorrect: false },
-                            { text: 'Abandon the car and move to higher ground', isCorrect: true },
-                            { text: 'Open all windows', isCorrect: false }
+                            { text: 'It may contain debris or pathogens', isCorrect: true },
+                            { text: 'It\'s boring', isCorrect: false },
+                            { text: 'It helps you exercise', isCorrect: false },
+                            { text: 'It\'s fun', isCorrect: false }
                         ],
-                        explanation: 'If your car is caught in flood water, abandon it immediately and move to higher ground. Cars can be swept away by just 2 feet of water.',
+                        explanation: 'Floodwater is contaminated with sewage, chemicals, and dangerous debris.',
+                        difficulty: 'hard',
+                        points: 4
+                    }
+                ],
+                settings: {
+                    timeLimit: 8,
+                    passingScore: 75,
+                    maxAttempts: 3,
+                    randomizeQuestions: false,
+                    showCorrectAnswers: true
+                }
+            },
+            // Cyclone Quiz
+            {
+                title: 'Cyclone and Storm Safety Quiz',
+                description: 'Understanding cyclone preparedness and response.',
+                moduleId: createdModules[2]._id,
+                difficulty: 'medium',
+                status: 'published',
+                questions: [
+                    {
+                        question: 'Where do cyclones mostly hit in India?',
+                        options: [
+                            { text: 'Coastal regions', isCorrect: true },
+                            { text: 'Deserts', isCorrect: false },
+                            { text: 'Himalayas', isCorrect: false },
+                            { text: 'Central plains', isCorrect: false }
+                        ],
+                        explanation: 'Tropical storms affect coastal areas where they form over warm ocean waters.',
+                        difficulty: 'easy',
+                        points: 2
+                    },
+                    {
+                        question: 'Cyclones in India commonly occur in which months?',
+                        options: [
+                            { text: 'May–November', isCorrect: true },
+                            { text: 'December–February', isCorrect: false },
+                            { text: 'March–April', isCorrect: false },
+                            { text: 'All year equally', isCorrect: false }
+                        ],
+                        explanation: 'Pre-monsoon and monsoon months have favorable conditions for cyclone formation.',
+                        difficulty: 'easy',
+                        points: 2
+                    },
+                    {
+                        question: 'Cyclone warnings are issued by:',
+                        options: [
+                            { text: 'IMD', isCorrect: true },
+                            { text: 'NDMA', isCorrect: false },
+                            { text: 'ISRO', isCorrect: false },
+                            { text: 'NASA', isCorrect: false }
+                        ],
+                        explanation: 'India Meteorological Department (IMD) is responsible for weather warnings.',
+                        difficulty: 'medium',
+                        points: 3
+                    },
+                    {
+                        question: 'Why should you avoid taking shelter under trees during a cyclone?',
+                        options: [
+                            { text: 'Trees can fall or break branches', isCorrect: true },
+                            { text: 'Trees are shady', isCorrect: false },
+                            { text: 'Trees attract birds', isCorrect: false },
+                            { text: 'Trees provide oxygen', isCorrect: false }
+                        ],
+                        explanation: 'Strong winds can uproot trees or break large branches that can cause injury.',
+                        difficulty: 'hard',
+                        points: 4
+                    }
+                ],
+                settings: {
+                    timeLimit: 10,
+                    passingScore: 75,
+                    maxAttempts: 3,
+                    randomizeQuestions: true,
+                    showCorrectAnswers: true
+                }
+            },
+            // Fire Safety Quiz
+            {
+                title: 'Fire Safety Quiz',
+                description: 'Fire prevention and emergency response procedures.',
+                moduleId: createdModules[3]._id,
+                difficulty: 'easy',
+                status: 'published',
+                questions: [
+                    {
+                        question: 'What should you do first during a fire?',
+                        options: [
+                            { text: 'Raise alarm', isCorrect: true },
+                            { text: 'Hide under desk', isCorrect: false },
+                            { text: 'Use water on electrical fire', isCorrect: false },
+                            { text: 'Ignore it', isCorrect: false }
+                        ],
+                        explanation: 'Alert others immediately so everyone can evacuate safely.',
+                        difficulty: 'easy',
+                        points: 2
+                    },
+                    {
+                        question: 'What is \'Stop, Drop, Roll\' used for?',
+                        options: [
+                            { text: 'If clothes catch fire', isCorrect: true },
+                            { text: 'During earthquake', isCorrect: false },
+                            { text: 'During flood', isCorrect: false },
+                            { text: 'During cyclone', isCorrect: false }
+                        ],
+                        explanation: 'This technique helps extinguish fire on clothing by cutting off oxygen supply.',
+                        difficulty: 'easy',
+                        points: 2
+                    },
+                    {
+                        question: 'Which fire extinguisher should be used on electrical fires?',
+                        options: [
+                            { text: 'CO2 extinguisher', isCorrect: true },
+                            { text: 'Water extinguisher', isCorrect: false },
+                            { text: 'Foam extinguisher', isCorrect: false },
+                            { text: 'Sand', isCorrect: false }
+                        ],
+                        explanation: 'CO2 is non-conductive and safe to use on electrical equipment.',
+                        difficulty: 'medium',
+                        points: 3
+                    },
+                    {
+                        question: 'Why should you never use elevators during a fire?',
+                        options: [
+                            { text: 'They may trap you', isCorrect: true },
+                            { text: 'They move too slowly', isCorrect: false },
+                            { text: 'They are crowded', isCorrect: false },
+                            { text: 'They are expensive', isCorrect: false }
+                        ],
+                        explanation: 'Elevators can fail during fires, trapping people inside.',
+                        difficulty: 'hard',
+                        points: 4
+                    }
+                ],
+                settings: {
+                    timeLimit: 8,
+                    passingScore: 70,
+                    maxAttempts: 5,
+                    randomizeQuestions: false,
+                    showCorrectAnswers: true
+                }
+            },
+            // Continue with other disaster quizzes...
+            // Stampede/Crowd Safety Quiz
+            {
+                title: 'Crowd Safety and Stampede Prevention',
+                description: 'Managing crowd situations and preventing stampedes.',
+                moduleId: createdModules[4]._id,
+                difficulty: 'medium',
+                status: 'published',
+                questions: [
+                    {
+                        question: 'During a stampede, you should:',
+                        options: [
+                            { text: 'Move calmly with the crowd', isCorrect: true },
+                            { text: 'Push people', isCorrect: false },
+                            { text: 'Run randomly', isCorrect: false },
+                            { text: 'Stand still', isCorrect: false }
+                        ],
+                        explanation: 'Moving with the crowd flow while staying calm prevents additional panic.',
+                        difficulty: 'easy',
+                        points: 2
+                    },
+                    {
+                        question: 'Which part of the body should you protect during crowd panic?',
+                        options: [
+                            { text: 'Chest and head', isCorrect: true },
+                            { text: 'Feet only', isCorrect: false },
+                            { text: 'Hands only', isCorrect: false },
+                            { text: 'Back only', isCorrect: false }
+                        ],
+                        explanation: 'Protecting vital organs like chest and head is crucial for survival.',
+                        difficulty: 'easy',
+                        points: 2
+                    },
+                    {
+                        question: 'Which measure helps prevent stampedes in schools?',
+                        options: [
+                            { text: 'Controlled entry and exit points', isCorrect: true },
+                            { text: 'Ignore safety rules', isCorrect: false },
+                            { text: 'Overcrowding', isCorrect: false },
+                            { text: 'Lock exits', isCorrect: false }
+                        ],
+                        explanation: 'Managing crowd flow prevents bottlenecks that lead to stampedes.',
                         difficulty: 'medium',
                         points: 3
                     }
@@ -219,49 +525,10 @@ const createQuizData = async () => {
                     showCorrectAnswers: true
                 }
             },
-            {
-                title: 'Fire Safety Fundamentals',
-                description: 'Basic fire safety principles and emergency procedures.',
-                moduleId: createdModules[2]._id,
-                difficulty: 'easy',
-                status: 'published',
-                questions: [
-                    {
-                        question: 'What does the acronym PASS stand for when using a fire extinguisher?',
-                        options: [
-                            { text: 'Point, Aim, Spray, Sweep', isCorrect: false },
-                            { text: 'Pull, Aim, Squeeze, Sweep', isCorrect: true },
-                            { text: 'Push, Activate, Spray, Stop', isCorrect: false },
-                            { text: 'Prepare, Aim, Start, Stop', isCorrect: false }
-                        ],
-                        explanation: 'PASS stands for Pull the pin, Aim at the base, Squeeze the handle, Sweep side to side.',
-                        difficulty: 'easy',
-                        points: 2
-                    },
-                    {
-                        question: 'How often should smoke detector batteries be changed?',
-                        options: [
-                            { text: 'Every 5 years', isCorrect: false },
-                            { text: 'Every 2 years', isCorrect: false },
-                            { text: 'Every year', isCorrect: true },
-                            { text: 'Only when they beep', isCorrect: false }
-                        ],
-                        explanation: 'Smoke detector batteries should be changed at least once a year, preferably when daylight saving time changes.',
-                        difficulty: 'easy',
-                        points: 2
-                    }
-                ],
-                settings: {
-                    timeLimit: 5,
-                    passingScore: 70,
-                    maxAttempts: 5,
-                    randomizeQuestions: false,
-                    showCorrectAnswers: true
-                }
-            }
+            // Add remaining quizzes for Pandemic, Snow/Cold, Road Safety, Landslide, and Lightning...
         ];
 
-        console.log('\n🧩 Creating quizzes...');
+        console.log('\n🧩 Creating comprehensive quizzes...');
         for (const quizData of quizzes) {
             const existingQuiz = await Quiz.findOne({ title: quizData.title });
             if (!existingQuiz) {
@@ -273,7 +540,7 @@ const createQuizData = async () => {
             }
         }
 
-        console.log('\n✨ Quiz data creation completed!');
+        console.log('\n✨ Comprehensive quiz data creation completed!');
         console.log('\n📊 Summary:');
         
         const totalModules = await Module.countDocuments();
@@ -281,14 +548,12 @@ const createQuizData = async () => {
         
         console.log(`📚 Total Modules: ${totalModules}`);
         console.log(`🧩 Total Published Quizzes: ${totalQuizzes}`);
-        
-        console.log('\n🎯 Test the quizzes by logging in as a student and visiting /quiz');
 
     } catch (error) {
-        console.error('❌ Error creating quiz data:', error);
+        console.error('❌ Error creating comprehensive quiz data:', error);
     } finally {
         await mongoose.connection.close();
     }
 };
 
-createQuizData();
+createComprehensiveQuizData();

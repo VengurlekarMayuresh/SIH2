@@ -129,6 +129,10 @@ router.post('/student/login', async (req, res) => {
                 id: student._id,
                 name: student.name,
                 email: student.email,
+                rollNo: student.rollNo,
+                class: student.class,
+                division: student.division,
+                institutionId: student.institutionId,
                 institution: student.institutionId
             }
         });

@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import ResponsiveLayout from "@/components/ResponsiveLayout";
+import AlertDisplay from "@/components/AlertDisplay";
+import WeatherWidget from "@/components/WeatherWidget";
+import DisasterAlertSystem from "@/components/DisasterAlertSystem";
 import { useIsMobile } from "@/hooks/use-mobile";
 import axios from "axios";
 import { 
@@ -23,7 +26,8 @@ import {
   ChevronRight,
   User,
   LogOut,
-  Loader2
+  Loader2,
+  Cloud
 } from "lucide-react";
 
 interface DashboardActivity {
@@ -182,10 +186,24 @@ const Dashboard = () => {
       color: "primary",
     },
     {
-      title: "Take Safety Quiz",
+      title: "Take Safety Quizzes",
       description: "Test your knowledge and earn badges",
       icon: HelpCircle,
-      onClick: () => navigate("/quiz"),
+      onClick: () => navigate("/modules"), // Navigate to modules to see available quizzes
+      color: "secondary",
+    },
+    {
+      title: "View Progress",
+      description: "Track your learning journey and achievements",
+      icon: TrendingUp,
+      onClick: () => navigate("/progress"),
+      color: "accent",
+    },
+    {
+      title: "Weather & Safety",
+      description: "Check weather conditions and safety alerts",
+      icon: Cloud,
+      onClick: () => navigate("/weather-safety"),
       color: "secondary",
     },
     {
@@ -193,13 +211,6 @@ const Dashboard = () => {
       description: "Access emergency contacts and safety guides",
       icon: FileText,
       onClick: () => navigate("/resources"),
-      color: "accent",
-    },
-    {
-      title: "View Progress",
-      description: "Track your learning journey and achievements",
-      icon: TrendingUp,
-      onClick: () => navigate("/progress"),
       color: "primary",
     },
   ];
@@ -314,6 +325,31 @@ const Dashboard = () => {
             </Card>
           </div>
 
+          {/* Alerts Section */}
+          <AlertDisplay 
+            institutionId={userData?.institutionId?._id || userData?.institutionId}
+            studentClass={userData?.class}
+            targetAudience="students"
+            className="mb-6 md:mb-8"
+            maxAlerts={3}
+          />
+
+          {/* Weather and Disaster Alerts Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 md:mb-8">
+            <WeatherWidget 
+              userData={userData}
+              showDetails={false}
+              autoRefresh={true}
+              refreshInterval={600000}
+            />
+            <DisasterAlertSystem 
+              userData={userData}
+              showDetails={true}
+              autoRefresh={true}
+              refreshInterval={300000}
+              maxAlerts={3}
+            />
+          </div>
 
           {/* Enhanced Quick Actions */}
           <div className="mb-6 md:mb-8">
@@ -359,15 +395,16 @@ const Dashboard = () => {
           </div>
 
 
-          {/* Recent Activity & Next Badge */}
+            {/* Recent Activity & Next Badge */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
             <Card className="lg:col-span-2">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xl font-semibold">Recent Activity</CardTitle>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <CardTitle className="text-lg md:text-xl font-semibold">Recent Activity</CardTitle>
                   {dashboardData && (
                     <Badge variant="secondary" className="bg-primary/10 text-primary">
-                      {dashboardData.streak} day streak 🔥
+                      <Flame className="h-3 w-3 mr-1" />
+                      {dashboardData.streak} day streak
                     </Badge>
                   )}
                 </div>
@@ -391,45 +428,61 @@ const Dashboard = () => {
                     <p className="text-muted-foreground">Unable to load recent activity</p>
                   </div>
                 ) : dashboardData && dashboardData.recentActivity.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="space-y-3 md:space-y-4">
                     {dashboardData.recentActivity.map((activity, index) => {
                       const IconComponent = getActivityIcon(activity.icon);
                       return (
-                        <div key={index} className={`flex items-center gap-4 p-4 bg-gradient-to-r from-${activity.color}/5 to-${activity.color}/10 rounded-lg hover:shadow-md transition-all duration-300 cursor-pointer group`}>
-                          <div className={`w-12 h-12 bg-gradient-to-br from-${activity.color}/20 to-${activity.color}/30 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-                            <IconComponent className={`h-6 w-6 text-${activity.color}`} />
+                        <div key={index} className={`flex items-center gap-3 md:gap-4 p-3 md:p-4 bg-gradient-to-r from-${activity.color}/5 to-${activity.color}/10 rounded-lg hover:shadow-md transition-all duration-300 cursor-pointer group`}>
+                          <div className={`w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-${activity.color}/20 to-${activity.color}/30 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                            <IconComponent className={`h-5 w-5 md:h-6 md:w-6 text-${activity.color}`} />
                           </div>
-                          <div className="flex-1">
-                            <p className="font-medium text-foreground">{activity.title}</p>
-                            <p className="text-sm text-muted-foreground">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-foreground text-sm md:text-base truncate">{activity.title}</p>
+                            <p className="text-xs md:text-sm text-muted-foreground">
                               {activity.description} • {formatTimeAgo(activity.time)}
                             </p>
                           </div>
-                          {activity.badge && (
-                            <Badge variant="outline" className={`bg-${activity.color}/10 text-${activity.color} border-${activity.color}/20`}>
-                              {activity.badge}
-                            </Badge>
-                          )}
-                          {activity.progress && (
-                            <Progress value={activity.progress} className="w-16 h-2" />
-                          )}
+                          <div className="flex flex-col items-end gap-1">
+                            {activity.badge && (
+                              <Badge variant="outline" className={`bg-${activity.color}/10 text-${activity.color} border-${activity.color}/20 text-xs`}>
+                                {activity.badge}
+                              </Badge>
+                            )}
+                            {activity.progress && (
+                              <div className="flex items-center gap-2">
+                                <Progress value={activity.progress} className="w-12 md:w-16 h-1.5" />
+                                <span className="text-xs text-muted-foreground">{Math.round(activity.progress)}%</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">No recent activity yet. Start learning to see your progress!</p>
+                  <div className="text-center py-6 md:py-8">
+                    <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <BookOpen className="h-8 w-8 text-primary" />
+                    </div>
+                    <h3 className="font-semibold text-foreground mb-2">No recent activity yet</h3>
+                    <p className="text-sm text-muted-foreground mb-4">Start learning to see your progress!</p>
+                    <Button onClick={() => navigate('/modules')} size={isMobile ? "sm" : "default"}>
+                      <BookOpen className="h-4 w-4 mr-2" />
+                      Start Learning
+                    </Button>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Next Badge */}
-            <div className="space-y-6">
+            {/* Next Badge & Quick Stats */}
+            <div className="space-y-4 md:space-y-6">
               <Card>
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-lg font-semibold">Next Badge</CardTitle>
+                  <CardTitle className="text-base md:text-lg font-semibold flex items-center gap-2">
+                    <Award className="h-4 w-4 md:h-5 md:w-5 text-accent" />
+                    Next Badge
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {loading ? (
@@ -442,24 +495,54 @@ const Dashboard = () => {
                     </div>
                   ) : dashboardData?.nextBadge ? (
                     <div className="text-center">
-                      <div className="w-16 h-16 bg-gradient-to-br from-accent/20 to-secondary/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <div className="text-2xl">{dashboardData.nextBadge.icon}</div>
+                      <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-accent/20 to-secondary/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <div className="text-xl md:text-2xl">{dashboardData.nextBadge.icon}</div>
                       </div>
-                      <h3 className="font-semibold text-foreground mb-1">{dashboardData.nextBadge.name}</h3>
-                      <p className="text-sm text-muted-foreground mb-3">{dashboardData.nextBadge.description}</p>
-                      <Progress value={dashboardData.nextBadge.progress} className="h-2" />
+                      <h3 className="font-semibold text-foreground mb-1 text-sm md:text-base">{dashboardData.nextBadge.name}</h3>
+                      <p className="text-xs md:text-sm text-muted-foreground mb-3">{dashboardData.nextBadge.description}</p>
+                      <div className="space-y-2">
+                        <Progress value={dashboardData.nextBadge.progress} className="h-2" />
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-muted-foreground">{Math.round(dashboardData.nextBadge.progress)}%</span>
+                          <span className="text-xs text-primary font-medium">{100 - Math.round(dashboardData.nextBadge.progress)}% to go</span>
+                        </div>
+                      </div>
                       <p className="text-xs text-muted-foreground mt-2">{dashboardData.nextBadge.requirement}</p>
                     </div>
                   ) : (
                     <div className="text-center">
-                      <div className="w-16 h-16 bg-gradient-to-br from-accent/20 to-secondary/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <Award className="h-8 w-8 text-accent" />
+                      <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-accent/20 to-secondary/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <Award className="h-6 w-6 md:h-8 md:w-8 text-accent" />
                       </div>
-                      <p className="text-sm text-muted-foreground">Great job! You've earned all available badges!</p>
+                      <h3 className="font-semibold text-foreground mb-2 text-sm md:text-base">All Caught Up!</h3>
+                      <p className="text-xs md:text-sm text-muted-foreground">Great job! You've earned all available badges!</p>
                     </div>
                   )}
                 </CardContent>
               </Card>
+              
+              {/* Quick Actions Mobile */}
+              {isMobile && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base font-semibold">Quick Actions</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {quickActions.slice(0, 2).map((action, index) => (
+                      <Button
+                        key={index}
+                        variant="outline"
+                        size="sm"
+                        onClick={action.onClick}
+                        className="w-full justify-start"
+                      >
+                        <action.icon className="h-4 w-4 mr-2" />
+                        {action.title}
+                      </Button>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
     </ResponsiveLayout>

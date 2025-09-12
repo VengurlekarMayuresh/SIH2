@@ -1,11 +1,12 @@
 import { NavLink } from "react-router-dom";
-import { Home, BookOpen, HelpCircle, FileText, TrendingUp, Shield } from "lucide-react";
+import { Home, BookOpen, HelpCircle, FileText, TrendingUp, Shield, Cloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const sidebarItems = [
   { href: "/dashboard", icon: Home, label: "Home" },
   { href: "/modules", icon: BookOpen, label: "Disaster Modules" },
   { href: "/quiz", icon: HelpCircle, label: "Quizzes" },
+  { href: "/weather-safety", icon: Cloud, label: "Weather & Safety" },
   { href: "/resources", icon: FileText, label: "Resources" },
   { href: "/progress", icon: TrendingUp, label: "Progress" },
 ];

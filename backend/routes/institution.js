@@ -191,16 +191,60 @@ router.get('/institution/students-progress', authMiddleware, institutionOnly, as
 
         const totalStudents = await Student.countDocuments(filter);
         
-        // TODO: Add progress tracking from StudentProgress model
-        const studentsWithProgress = students.map(student => ({
-            ...student.toObject(),
-            progress: {
-                modulesCompleted: Math.floor(Math.random() * 5), // Mock data - replace with actual progress
-                quizzesTaken: Math.floor(Math.random() * 10),
-                averageScore: Math.floor(Math.random() * 40) + 60,
-                lastActive: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000)
-            }
-        }));
+        // Get real progress data from database
+        const StudentProgress = require('../models/StudentProgress');
+        const QuizAttempt = require('../models/QuizAttempt');
+        
+        const studentsWithProgress = await Promise.all(
+            students.map(async (student) => {
+                // Get module completion count
+                const modulesCompleted = await StudentProgress.countDocuments({
+                    student: student._id,
+                    completed: true
+                });
+                
+                // Get quiz attempts
+                const quizAttempts = await QuizAttempt.find({
+                    student: student._id,
+                    status: { $in: ['completed', 'submitted'] }
+                });
+                
+                // Calculate average score
+                const averageScore = quizAttempts.length > 0 
+                    ? Math.round(quizAttempts.reduce((sum, attempt) => sum + attempt.score.percentage, 0) / quizAttempts.length)
+                    : 0;
+                
+                // Get last activity (most recent quiz attempt or module completion)
+                const lastQuizAttempt = await QuizAttempt.findOne({
+                    student: student._id
+                }).sort({ createdAt: -1 });
+                
+                const lastModuleProgress = await StudentProgress.findOne({
+                    student: student._id
+                }).sort({ updatedAt: -1 });
+                
+                let lastActive = student.createdAt;
+                if (lastQuizAttempt && lastModuleProgress) {
+                    lastActive = lastQuizAttempt.createdAt > lastModuleProgress.updatedAt 
+                        ? lastQuizAttempt.createdAt 
+                        : lastModuleProgress.updatedAt;
+                } else if (lastQuizAttempt) {
+                    lastActive = lastQuizAttempt.createdAt;
+                } else if (lastModuleProgress) {
+                    lastActive = lastModuleProgress.updatedAt;
+                }
+                
+                return {
+                    ...student.toObject(),
+                    progress: {
+                        modulesCompleted,
+                        quizzesTaken: quizAttempts.length,
+                        averageScore,
+                        lastActive
+                    }
+                };
+            })
+        );
 
         res.json({
             students: studentsWithProgress,

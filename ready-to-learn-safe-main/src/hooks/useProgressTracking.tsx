@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from './useAuth'; // Assuming you have an auth hook
 
 interface ProgressData {
   userId: string;
@@ -144,7 +143,7 @@ class ProgressTracker {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         },
         body: JSON.stringify(dataToSync)
       });
@@ -172,7 +171,16 @@ class ProgressTracker {
 }
 
 export const useProgressTracking = () => {
-  const { user } = useAuth();
+  // Get user data from localStorage
+  const getCurrentUser = () => {
+    try {
+      const userData = localStorage.getItem('userData');
+      return userData ? JSON.parse(userData) : null;
+    } catch {
+      return null;
+    }
+  };
+  
   const [currentProgress, setCurrentProgress] = useState<ModuleProgress | null>(null);
   const [isTracking, setIsTracking] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<Date>(new Date());
@@ -189,8 +197,9 @@ export const useProgressTracking = () => {
     setIsTracking(true);
 
     // Track session start
+    const user = getCurrentUser();
     tracker.trackProgress({
-      userId: user?.id || '',
+      userId: user?.id || user?._id || '',
       moduleId,
       chapterId,
       action: 'session_start',
@@ -199,7 +208,7 @@ export const useProgressTracking = () => {
       progress: 0,
       metadata: { platform: navigator.platform, userAgent: navigator.userAgent }
     });
-  }, [user, tracker]);
+  }, [tracker]);
 
   // Stop tracking session
   const stopTracking = useCallback(() => {
@@ -207,8 +216,9 @@ export const useProgressTracking = () => {
 
     const timeSpent = Math.floor((Date.now() - sessionStartTime.getTime()) / 1000);
     
+    const user = getCurrentUser();
     tracker.trackProgress({
-      userId: user?.id || '',
+      userId: user?.id || user?._id || '',
       moduleId: currentModule,
       chapterId: currentChapter,
       action: 'session_end',
@@ -219,15 +229,16 @@ export const useProgressTracking = () => {
     });
 
     setIsTracking(false);
-  }, [isTracking, sessionStartTime, currentModule, currentChapter, user, tracker]);
+  }, [isTracking, sessionStartTime, currentModule, currentChapter, tracker]);
 
   // Track video progress
   const trackVideoProgress = useCallback((videoId: string, watchTime: number, totalDuration: number, currentPosition: number) => {
     const progress = Math.min((watchTime / totalDuration) * 100, 100);
     const completed = progress >= 80; // Consider video completed at 80%
 
+    const user = getCurrentUser();
     tracker.trackProgress({
-      userId: user?.id || '',
+      userId: user?.id || user?._id || '',
       moduleId: currentModule,
       chapterId: currentChapter,
       contentId: videoId,
@@ -243,12 +254,13 @@ export const useProgressTracking = () => {
         completed 
       }
     });
-  }, [currentModule, currentChapter, user, tracker]);
+  }, [currentModule, currentChapter, tracker]);
 
   // Track chapter completion
   const trackChapterCompletion = useCallback((chapterId: string, timeSpent: number) => {
+    const user = getCurrentUser();
     tracker.trackProgress({
-      userId: user?.id || '',
+      userId: user?.id || user?._id || '',
       moduleId: currentModule,
       chapterId: chapterId,
       action: 'chapter_completed',
@@ -257,12 +269,13 @@ export const useProgressTracking = () => {
       progress: 100,
       metadata: { completedAt: new Date() }
     });
-  }, [currentModule, user, tracker]);
+  }, [currentModule, tracker]);
 
   // Track module completion
   const trackModuleCompletion = useCallback((moduleId: string, totalTimeSpent: number, finalScore?: number) => {
+    const user = getCurrentUser();
     tracker.trackProgress({
-      userId: user?.id || '',
+      userId: user?.id || user?._id || '',
       moduleId: moduleId,
       action: 'module_completed',
       timestamp: new Date(),
@@ -274,12 +287,13 @@ export const useProgressTracking = () => {
         certificateEarned: finalScore ? finalScore >= 70 : true
       }
     });
-  }, [user, tracker]);
+  }, [tracker]);
 
   // Track quiz attempt
   const trackQuizAttempt = useCallback((quizId: string, score: number, percentage: number, timeSpent: number, answers: any[]) => {
+    const user = getCurrentUser();
     tracker.trackProgress({
-      userId: user?.id || '',
+      userId: user?.id || user?._id || '',
       moduleId: currentModule,
       contentId: quizId,
       action: 'quiz_completed',
@@ -295,12 +309,13 @@ export const useProgressTracking = () => {
         correctAnswers: answers.filter(a => a.correct).length
       }
     });
-  }, [currentModule, user, tracker]);
+  }, [currentModule, tracker]);
 
   // Track engagement events
   const trackEngagement = useCallback((action: string, contentId?: string, metadata?: any) => {
+    const user = getCurrentUser();
     tracker.trackProgress({
-      userId: user?.id || '',
+      userId: user?.id || user?._id || '',
       moduleId: currentModule,
       chapterId: currentChapter,
       contentId,
@@ -310,14 +325,14 @@ export const useProgressTracking = () => {
       progress: 0,
       metadata
     });
-  }, [currentModule, currentChapter, sessionStartTime, user, tracker]);
+  }, [currentModule, currentChapter, sessionStartTime, tracker]);
 
   // Get current progress for a module
   const getModuleProgress = useCallback(async (moduleId: string): Promise<ModuleProgress | null> => {
     try {
       const response = await fetch(`/api/student/progress/${moduleId}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         }
       });
       
@@ -338,9 +353,10 @@ export const useProgressTracking = () => {
 
     const interval = setInterval(() => {
       const timeSpent = Math.floor((Date.now() - sessionStartTime.getTime()) / 1000);
+      const user = getCurrentUser();
       
       tracker.trackProgress({
-        userId: user?.id || '',
+        userId: user?.id || user?._id || '',
         moduleId: currentModule,
         chapterId: currentChapter,
         action: 'auto_save',
@@ -352,7 +368,7 @@ export const useProgressTracking = () => {
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [isTracking, sessionStartTime, currentModule, currentChapter, user, tracker]);
+  }, [isTracking, sessionStartTime, currentModule, currentChapter, tracker]);
 
   // Cleanup on unmount
   useEffect(() => {

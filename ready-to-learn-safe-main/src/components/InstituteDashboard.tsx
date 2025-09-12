@@ -32,6 +32,7 @@ import {
   ArrowDown,
   User
 } from 'lucide-react';
+import AlertManagement from './AlertManagement';
 
 const API_BASE_URL = 'http://localhost:5001/api';
 
@@ -183,7 +184,7 @@ const InstituteDashboard: React.FC<InstituteDashboardProps> = ({ institutionData
       <div className="max-w-7xl mx-auto p-6">
         {/* Navigation Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Overview
@@ -191,6 +192,10 @@ const InstituteDashboard: React.FC<InstituteDashboardProps> = ({ institutionData
             <TabsTrigger value="students" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Students
+            </TabsTrigger>
+            <TabsTrigger value="alerts" className="flex items-center gap-2">
+              <Bell className="h-4 w-4" />
+              Alerts
             </TabsTrigger>
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <PieChart className="h-4 w-4" />
@@ -442,6 +447,11 @@ const InstituteDashboard: React.FC<InstituteDashboardProps> = ({ institutionData
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Alerts Tab */}
+          <TabsContent value="alerts" className="space-y-6">
+            <AlertManagement institutionData={institutionData} />
           </TabsContent>
 
           {/* Analytics Tab */}

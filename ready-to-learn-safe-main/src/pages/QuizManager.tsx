@@ -133,7 +133,7 @@ const QuizManager = () => {
   const fetchQuiz = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/institution/quizzes/${quizId}`, {
+      const response = await fetch(`http://localhost:5001/api/institution/quizzes/${quizId}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
@@ -144,8 +144,48 @@ const QuizManager = () => {
         throw new Error('Failed to fetch quiz');
       }
 
-      const data = await response.json();
-      setQuiz(data.quiz);
+      const backendQuiz = await response.json();
+      
+      // Transform backend data to frontend format
+      const frontendQuiz = {
+        id: backendQuiz._id,
+        title: backendQuiz.title,
+        description: backendQuiz.description,
+        moduleId: backendQuiz.moduleId,
+        questions: backendQuiz.questions.map((q: any) => ({
+          id: q._id,
+          question: q.question,
+          options: q.options.map((opt: any) => opt.text),
+          correct: q.options.findIndex((opt: any) => opt.isCorrect),
+          explanation: q.explanation,
+          difficulty: q.difficulty,
+          category: q.category || '',
+          points: q.points,
+          timeLimit: q.timeLimit,
+          hint: q.hints && q.hints.length > 0 ? q.hints[0].text : ''
+        })),
+        settings: {
+          timeLimit: backendQuiz.settings.timeLimit,
+          passingScore: backendQuiz.settings.passingScore,
+          allowRetakes: backendQuiz.settings.allowRetake,
+          maxAttempts: backendQuiz.settings.maxAttempts,
+          showExplanations: backendQuiz.settings.showCorrectAnswers,
+          showCorrectAnswers: backendQuiz.settings.showCorrectAnswers,
+          randomizeQuestions: backendQuiz.settings.randomizeQuestions,
+          randomizeOptions: backendQuiz.settings.randomizeOptions
+        },
+        isActive: backendQuiz.status === 'published',
+        publishedAt: backendQuiz.status === 'published' ? new Date(backendQuiz.updatedAt) : null,
+        analytics: {
+          totalAttempts: 0,
+          averageScore: 0,
+          passRate: 0
+        }
+      };
+      
+      setQuiz(frontendQuiz);
+      console.log(`✅ Loaded quiz: ${frontendQuiz.title} (${frontendQuiz.questions.length} questions)`);
+      
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -160,9 +200,43 @@ const QuizManager = () => {
       setSaving(true);
       setError(null);
 
+      // Transform frontend quiz data to backend format
+      const transformedQuiz = {
+        title: quiz.title,
+        description: quiz.description,
+        moduleId: quiz.moduleId,
+        questions: quiz.questions.map(q => ({
+          question: q.question,
+          options: q.options.map((optionText, index) => ({
+            text: optionText,
+            isCorrect: index === q.correct
+          })),
+          difficulty: q.difficulty,
+          explanation: q.explanation,
+          timeLimit: q.timeLimit,
+          points: q.points,
+          hints: q.hint ? [{
+            text: q.hint,
+            penalty: 0.1
+          }] : []
+        })),
+        settings: {
+          timeLimit: quiz.settings.timeLimit,
+          passingScore: quiz.settings.passingScore,
+          maxAttempts: quiz.settings.maxAttempts,
+          randomizeQuestions: quiz.settings.randomizeQuestions,
+          randomizeOptions: quiz.settings.randomizeOptions,
+          showCorrectAnswers: quiz.settings.showCorrectAnswers,
+          allowRetake: quiz.settings.allowRetakes,
+          retakeDelay: 0
+        },
+        status: quiz.isActive ? 'published' : 'draft',
+        createdBy: 'system'
+      };
+
       const url = quizId === 'new' 
-        ? '/api/institution/quizzes'
-        : `/api/institution/quizzes/${quiz.id}`;
+        ? 'http://localhost:5001/api/institution/quizzes'
+        : `http://localhost:5001/api/institution/quizzes/${quiz.id}`;
       
       const method = quizId === 'new' ? 'POST' : 'PUT';
 
@@ -172,18 +246,61 @@ const QuizManager = () => {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(quiz)
+        body: JSON.stringify(transformedQuiz)
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save quiz');
+        const errorData = await response.json().catch(() => ({ message: 'Failed to save quiz' }));
+        throw new Error(errorData.message || 'Failed to save quiz');
       }
 
       const data = await response.json();
-      setQuiz(data.quiz);
+      
+      // Transform the backend response back to frontend format
+      const backendQuiz = data;
+      const frontendQuiz = {
+        id: backendQuiz._id,
+        title: backendQuiz.title,
+        description: backendQuiz.description,
+        moduleId: backendQuiz.moduleId,
+        questions: backendQuiz.questions.map((q: any) => ({
+          id: q._id,
+          question: q.question,
+          options: q.options.map((opt: any) => opt.text),
+          correct: q.options.findIndex((opt: any) => opt.isCorrect),
+          explanation: q.explanation,
+          difficulty: q.difficulty,
+          category: q.category || '',
+          points: q.points,
+          timeLimit: q.timeLimit,
+          hint: q.hints && q.hints.length > 0 ? q.hints[0].text : ''
+        })),
+        settings: {
+          timeLimit: backendQuiz.settings.timeLimit,
+          passingScore: backendQuiz.settings.passingScore,
+          allowRetakes: backendQuiz.settings.allowRetake,
+          maxAttempts: backendQuiz.settings.maxAttempts,
+          showExplanations: backendQuiz.settings.showCorrectAnswers,
+          showCorrectAnswers: backendQuiz.settings.showCorrectAnswers,
+          randomizeQuestions: backendQuiz.settings.randomizeQuestions,
+          randomizeOptions: backendQuiz.settings.randomizeOptions
+        },
+        isActive: backendQuiz.status === 'published',
+        publishedAt: backendQuiz.status === 'published' ? new Date() : null,
+        analytics: {
+          totalAttempts: 0,
+          averageScore: 0,
+          passRate: 0
+        }
+      };
+      
+      setQuiz(frontendQuiz);
+      
+      // Success message
+      console.log(`✅ Quiz ${quizId === 'new' ? 'created' : 'updated'} successfully:`, frontendQuiz.title);
 
       if (quizId === 'new') {
-        navigate(`/quiz-manager/${moduleId}/${data.quiz.id}`);
+        navigate(`/quiz-manager/${moduleId}/${frontendQuiz.id}`);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save quiz');
@@ -194,6 +311,25 @@ const QuizManager = () => {
 
   const addQuestion = () => {
     if (!quiz) return;
+    
+    // Validate question before adding
+    const errors: string[] = [];
+    if (!questionForm.question?.trim()) errors.push('Question text is required');
+    if (!questionForm.explanation?.trim()) errors.push('Explanation is required');
+    if (!questionForm.category?.trim()) errors.push('Category is required');
+    
+    const validOptions = questionForm.options?.filter(opt => opt.trim()) || [];
+    if (validOptions.length < 2) errors.push('At least 2 options are required');
+    
+    const correctOptionText = questionForm.options?.[questionForm.correct || 0];
+    if (!correctOptionText?.trim()) errors.push('Correct answer option cannot be empty');
+    
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    
+    setValidationErrors([]); // Clear validation errors
 
     const newQuestion: Question = {
       id: Date.now().toString(),
@@ -212,6 +348,8 @@ const QuizManager = () => {
       ...quiz,
       questions: [...quiz.questions, newQuestion]
     });
+    
+    console.log(`➕ Added question ${quiz.questions.length + 1}: ${newQuestion.question.substring(0, 50)}...`);
 
     // Reset form
     setQuestionForm({
@@ -248,24 +386,40 @@ const QuizManager = () => {
   const publishQuiz = async () => {
     if (!quiz) return;
 
+    // Validate quiz before publishing
+    const errors = validateQuiz();
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      setError('Please fix validation errors before publishing');
+      return;
+    }
+
     try {
-      const response = await fetch(`/api/institution/quizzes/${quiz.id}/publish`, {
-        method: 'POST',
+      const response = await fetch(`http://localhost:5001/api/institution/quizzes/${quiz.id}/status`, {
+        method: 'PUT',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ publish: !quiz.isActive })
+        body: JSON.stringify({ 
+          status: quiz.isActive ? 'draft' : 'published' 
+        })
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to publish quiz');
+        const error = await response.json().catch(() => ({ message: 'Failed to update quiz status' }));
+        throw new Error(error.message || 'Failed to update quiz status');
       }
 
-      await fetchQuiz(); // Refresh quiz data
+      const data = await response.json();
+      
+      // Update local state
+      setQuiz(prev => prev ? { ...prev, isActive: !prev.isActive } : prev);
+      
+      console.log(`✅ Quiz ${quiz.isActive ? 'unpublished' : 'published'} successfully`);
+      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to publish quiz');
+      setError(err instanceof Error ? err.message : 'Failed to update quiz status');
     }
   };
 
@@ -590,6 +744,21 @@ const QuizManager = () => {
                       placeholder="Optional hint for students..."
                     />
                   </div>
+
+                  {/* Validation Errors */}
+                  {validationErrors.length > 0 && (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        <div className="font-medium mb-2">Please fix the following:</div>
+                        <ul className="space-y-1">
+                          {validationErrors.map((error, index) => (
+                            <li key={index} className="text-sm">• {error}</li>
+                          ))}
+                        </ul>
+                      </AlertDescription>
+                    </Alert>
+                  )}
 
                   <Button onClick={addQuestion} className="w-full">
                     <Plus className="h-4 w-4 mr-2" />
