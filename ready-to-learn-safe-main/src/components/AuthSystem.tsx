@@ -29,8 +29,10 @@ import {
   FileText,
   ChevronRight,
   Eye,
-  Flame
+  Flame,
+  Settings
 } from 'lucide-react';
+import { ThemeToggle } from './theme-toggle';
 
 // API Base URL
 const API_BASE_URL = 'http://localhost:5001/api';
@@ -794,9 +796,14 @@ const AuthSystem = () => {
                 </div>
                 
                 <div className="flex items-center gap-3">
+                  <ThemeToggle />
                   <Button variant="outline" size="sm" className="relative">
                     <Bell className="h-4 w-4 mr-1" />
                     Notifications
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <Settings className="h-4 w-4 mr-1" />
+                    Settings
                   </Button>
                   <Button 
                     variant="destructive" 

@@ -33,6 +33,10 @@ import {
   User
 } from 'lucide-react';
 import AlertManagement from './AlertManagement';
+import LiveStatsCard from './LiveStatsCard';
+import RecentActivityFeed from './RecentActivityFeed';
+import { useLiveStats, useStatsRefresh } from '../hooks/useLiveStats';
+import { ThemeToggle } from './theme-toggle';
 
 const API_BASE_URL = 'http://localhost:5001/api';
 
@@ -81,6 +85,10 @@ const InstituteDashboard: React.FC<InstituteDashboardProps> = ({ institutionData
   const [totalPages, setTotalPages] = useState(1);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  
+  // Live statistics hook (refreshes every 30 seconds)
+  const { stats: liveStats, activities, loading: statsLoading, error: statsError, refreshStats } = useLiveStats(30000);
+  const { isRefreshing, refresh } = useStatsRefresh();
 
   // Fetch students with progress data
   const fetchStudents = async () => {
@@ -165,6 +173,7 @@ const InstituteDashboard: React.FC<InstituteDashboardProps> = ({ institutionData
             </div>
           </div>
           <div className="flex gap-2">
+            <ThemeToggle />
             <Button variant="outline" size="sm">
               <Bell className="h-4 w-4 mr-1" />
               Notifications
@@ -212,112 +221,23 @@ const InstituteDashboard: React.FC<InstituteDashboardProps> = ({ institutionData
             </TabsTrigger>
           </TabsList>
 
-          {/* Overview Tab */}
+          {/* Overview Tab - Live Statistics */}
           <TabsContent value="overview" className="space-y-6">
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <Card className="bg-gradient-to-br from-primary/10 to-primary/20 border-primary/20">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-primary font-medium">Total Students</p>
-                      <p className="text-3xl font-bold text-primary">
-                        {analytics?.totalStudents || 0}
-                      </p>
-                    </div>
-                    <Users className="h-8 w-8 text-primary" />
-                  </div>
-                  <div className="flex items-center mt-2 text-sm">
-                    <ArrowUp className="h-4 w-4 text-green-500 mr-1" />
-                    <span className="text-green-600">
-                      {analytics?.studentsThisMonth || 0} this month
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
+            {/* Live Statistics Cards */}
+            <LiveStatsCard 
+              stats={liveStats}
+              loading={statsLoading}
+              error={statsError}
+              onRefresh={() => refresh(refreshStats)}
+              isRefreshing={isRefreshing}
+            />
 
-              <Card className="bg-gradient-to-br from-accent/10 to-accent/20 border-accent/20">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-accent font-medium">Avg. Progress</p>
-                      <p className="text-3xl font-bold text-accent">78%</p>
-                    </div>
-                    <TrendingUp className="h-8 w-8 text-accent" />
-                  </div>
-                  <Progress value={78} className="mt-2" />
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-secondary/10 to-secondary/20 border-secondary/20">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-secondary font-medium">Active Today</p>
-                      <p className="text-3xl font-bold text-secondary">24</p>
-                    </div>
-                    <Activity className="h-8 w-8 text-secondary" />
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-2">
-                    67% engagement rate
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-green-700 font-medium">Completion Rate</p>
-                      <p className="text-3xl font-bold text-green-700">85%</p>
-                    </div>
-                    <Target className="h-8 w-8 text-green-600" />
-                  </div>
-                  <div className="text-xs text-green-600 mt-2">
-                    Above average
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Recent Activity */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Recent Student Activity
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {filteredStudents.slice(0, 5).map((student) => (
-                    <div key={student._id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarFallback>
-                            {student.name.split(' ').map(n => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{student.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {student.class}-{student.division} • Roll: {student.rollNo}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <Badge variant="outline" className="mb-1">
-                          {student.progress.averageScore}% avg
-                        </Badge>
-                        <p className="text-xs text-muted-foreground">
-                          {student.progress.modulesCompleted} modules completed
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            {/* Recent Activity Feed */}
+            <RecentActivityFeed 
+              activities={activities}
+              loading={statsLoading}
+              error={statsError}
+            />
           </TabsContent>
 
           {/* Students Tab */}

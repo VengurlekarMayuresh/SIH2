@@ -2,6 +2,7 @@ import { NavLink } from "react-router-dom";
 import { Home, BookOpen, HelpCircle, FileText, TrendingUp, Shield, Cloud, Zap, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { SimpleThemeToggle } from "./theme-toggle";
 
 const sidebarItems = [
   { href: "/dashboard", icon: Home, label: "Home" },
@@ -21,9 +22,12 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout }) => {
   return (
     <aside className="w-64 bg-card border-r border-border min-h-screen flex flex-col">
       <div className="p-6 flex-1">
-        <div className="flex items-center gap-2 mb-8">
-          <Shield className="h-8 w-8 text-primary" />
-          <span className="text-2xl font-bold text-primary">SafeEd</span>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-2">
+            <Shield className="h-8 w-8 text-primary" />
+            <span className="text-2xl font-bold text-primary">SafeEd</span>
+          </div>
+          <SimpleThemeToggle />
         </div>
         
         <nav className="space-y-2">
