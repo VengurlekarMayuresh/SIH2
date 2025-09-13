@@ -88,6 +88,24 @@ router.post('/institution/login', async (req, res) => {
     }
 });
 
+// Institution Logout
+router.post('/institution/logout', authMiddleware, institutionOnly, async (req, res) => {
+    try {
+        // For JWT tokens, we can't really invalidate them on the server side
+        // unless we maintain a blacklist. For now, we'll just send success response
+        // and let the client handle token removal
+        res.json({
+            message: "Logout successful",
+            success: true
+        });
+    } catch (error) {
+        res.status(500).json({ 
+            message: "Logout failed",
+            error: error.message 
+        });
+    }
+});
+
 // Get Institution Profile
 router.get('/institution/profile', authMiddleware, institutionOnly, async (req, res) => {
     try {

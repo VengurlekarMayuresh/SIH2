@@ -389,38 +389,40 @@ router.get('/student/quizzes', authMiddleware, studentOnly, async (req, res) => 
         
         const total = await Quiz.countDocuments(filter);
         
-        // For each quiz, check student's attempts
-        const quizzesWithProgress = await Promise.all(quizzes.map(async (quiz) => {
-            const attempts = await QuizAttempt.find({
-                student: req.user._id,
-                quiz: quiz._id,
-                status: 'submitted'
-            }).sort({ createdAt: -1 }).limit(1);
-            
-            const lastAttempt = attempts[0];
-            const canAttempt = await QuizAttempt.canAttemptQuiz(req.user._id, quiz);
-            
-            return {
-                id: quiz._id,
-                title: quiz.title,
-                description: quiz.description,
-                module: {
-                    _id: quiz.moduleId._id,
-                    title: quiz.moduleId.title,
-                    thumbnail: quiz.moduleId.thumbnail
-                },
-                source: quiz.createdBy || 'system',
-                questionCount: quiz.questions.length,
-                timeLimit: quiz.settings.timeLimit,
-                passingScore: quiz.settings.passingScore,
-                difficulty: quiz.difficulty || 'medium',
-                attemptCount: await QuizAttempt.countDocuments({ student: req.user._id, quiz: quiz._id }),
-                lastScore: lastAttempt ? lastAttempt.score.percentage : null,
-                lastTime: lastAttempt ? lastAttempt.timing.totalTimeSpent : null,
-                canAttempt: canAttempt.canAttempt,
-                createdAt: quiz.createdAt
-            };
-        }));
+        // For each quiz, check student's attempts and filter out quizzes with missing modules
+        const quizzesWithProgress = await Promise.all(quizzes
+            .filter(quiz => quiz.moduleId) // Filter out quizzes with null moduleId
+            .map(async (quiz) => {
+                const attempts = await QuizAttempt.find({
+                    student: req.user._id,
+                    quiz: quiz._id,
+                    status: 'submitted'
+                }).sort({ createdAt: -1 }).limit(1);
+                
+                const lastAttempt = attempts[0];
+                const canAttempt = await QuizAttempt.canAttemptQuiz(req.user._id, quiz);
+                
+                return {
+                    id: quiz._id,
+                    title: quiz.title,
+                    description: quiz.description,
+                    module: {
+                        _id: quiz.moduleId._id,
+                        title: quiz.moduleId.title,
+                        thumbnail: quiz.moduleId.thumbnail
+                    },
+                    source: quiz.createdBy || 'system',
+                    questionCount: quiz.questions.length,
+                    timeLimit: quiz.settings.timeLimit,
+                    passingScore: quiz.settings.passingScore,
+                    difficulty: quiz.difficulty || 'medium',
+                    attemptCount: await QuizAttempt.countDocuments({ student: req.user._id, quiz: quiz._id }),
+                    lastScore: lastAttempt ? lastAttempt.score.percentage : null,
+                    lastTime: lastAttempt ? lastAttempt.timing.totalTimeSpent : null,
+                    canAttempt: canAttempt.canAttempt,
+                    createdAt: quiz.createdAt
+                };
+            }));
         
         res.json({
             quizzes: quizzesWithProgress,
@@ -469,21 +471,23 @@ router.get('/student/quizzes/featured', authMiddleware, studentOnly, async (req,
         ]);
         
         const featured = [
-            ...recentQuizzes.map(quiz => ({
-                id: quiz._id,
-                title: quiz.title,
-                description: quiz.description,
-                module: {
-                    _id: quiz.moduleId._id,
-                    title: quiz.moduleId.title,
-                    thumbnail: quiz.moduleId.thumbnail
-                },
-                source: quiz.createdBy || 'system',
-                questionCount: quiz.questions.length,
-                timeLimit: quiz.settings.timeLimit,
-                passingScore: quiz.settings.passingScore,
-                reason: 'Recently Added'
-            })),
+            ...recentQuizzes
+                .filter(quiz => quiz.moduleId) // Filter out quizzes with null moduleId
+                .map(quiz => ({
+                    id: quiz._id,
+                    title: quiz.title,
+                    description: quiz.description,
+                    module: {
+                        _id: quiz.moduleId._id,
+                        title: quiz.moduleId.title,
+                        thumbnail: quiz.moduleId.thumbnail
+                    },
+                    source: quiz.createdBy || 'system',
+                    questionCount: quiz.questions.length,
+                    timeLimit: quiz.settings.timeLimit,
+                    passingScore: quiz.settings.passingScore,
+                    reason: 'Recently Added'
+                })),
             ...popularQuizzes.map(quiz => ({
                 id: quiz._id,
                 title: quiz.title,

@@ -242,28 +242,51 @@ const AuthSystem = () => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userData');
-    localStorage.removeItem('userType');
-    
-    setIsLoggedIn(false);
-    setUserData(null);
-    setUserType(null);
-    setCurrentPage('auth');
-    
-    // Reset form data
-    setSignInData({ email: '', password: '' });
-    setInstitutionSignUpData({
-      name: '', institutionId: '', email: '', password: '', phone: '',
-      location: { state: '', district: '', city: '', pincode: '', address: '' }
-    });
-    setStudentSignUpData({
-      name: '', institutionId: '', rollNo: '', class: '', division: '',
-      email: '', password: '', phone: '', parentPhone: ''
-    });
-    setHasInstituteCode(true);
-    setError('');
+  const handleLogout = async () => {
+    // Show confirmation dialog
+    if (!window.confirm('Are you sure you want to logout?')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('authToken');
+      if (token && userType) {
+        // Call backend logout endpoint
+        const endpoint = userType === 'student' 
+          ? `${API_BASE_URL}/student/logout`
+          : `${API_BASE_URL}/institution/logout`;
+          
+        await axios.post(endpoint, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+    } catch (error) {
+      // Even if backend logout fails, we still logout on frontend
+      console.error('Backend logout failed:', error);
+    } finally {
+      // Clear local storage and reset state
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userData');
+      localStorage.removeItem('userType');
+      
+      setIsLoggedIn(false);
+      setUserData(null);
+      setUserType(null);
+      setCurrentPage('auth');
+      
+      // Reset form data
+      setSignInData({ email: '', password: '' });
+      setInstitutionSignUpData({
+        name: '', institutionId: '', email: '', password: '', phone: '',
+        location: { state: '', district: '', city: '', pincode: '', address: '' }
+      });
+      setStudentSignUpData({
+        name: '', institutionId: '', rollNo: '', class: '', division: '',
+        email: '', password: '', phone: '', parentPhone: ''
+      });
+      setHasInstituteCode(true);
+      setError('');
+    }
   };
 
   const resetForm = () => {
@@ -718,7 +741,7 @@ const AuthSystem = () => {
 
     return (
       <div className="flex min-h-screen bg-background">
-        <Sidebar />
+        <Sidebar onLogout={handleLogout} />
         
         <main className="flex-1 p-8">
           <div className="max-w-6xl mx-auto">
@@ -775,8 +798,13 @@ const AuthSystem = () => {
                     <Bell className="h-4 w-4 mr-1" />
                     Notifications
                   </Button>
-                  <Button variant="outline" size="sm" onClick={handleLogout}>
-                    <LogOut className="h-4 w-4 mr-1" />
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    onClick={handleLogout}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
                     Logout
                   </Button>
                 </div>

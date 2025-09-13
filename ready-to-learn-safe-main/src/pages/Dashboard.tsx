@@ -136,15 +136,34 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [navigate]);
 
-  const handleLogout = () => {
-    console.log('Logging out student...');
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userData');
-    localStorage.removeItem('userType');
-    // Clear any other potential auth-related items
-    localStorage.clear();
-    console.log('LocalStorage cleared, redirecting to home...');
-    navigate('/');
+  const handleLogout = async () => {
+    // Show confirmation dialog
+    if (!window.confirm('Are you sure you want to logout?')) {
+      return;
+    }
+
+    try {
+      console.log('Logging out student...');
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        // Call backend logout endpoint
+        await axios.post('/api/student/logout', {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+    } catch (error) {
+      // Even if backend logout fails, we still logout on frontend
+      console.error('Backend logout failed:', error);
+    } finally {
+      // Clear local storage and redirect
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userData');
+      localStorage.removeItem('userType');
+      // Clear any other potential auth-related items
+      localStorage.clear();
+      console.log('LocalStorage cleared, redirecting to home...');
+      navigate('/');
+    }
   };
 
   const getActivityIcon = (iconName: string) => {
@@ -261,6 +280,15 @@ const Dashboard = () => {
                     <Bell className="h-4 w-4 mr-1" />
                     Notifications
                     <div className="absolute -top-1 -right-1 w-3 h-3 bg-secondary rounded-full"></div>
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    onClick={handleLogout}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    <LogOut className="h-4 w-4 mr-1" />
+                    Logout
                   </Button>
                 </div>
               )}

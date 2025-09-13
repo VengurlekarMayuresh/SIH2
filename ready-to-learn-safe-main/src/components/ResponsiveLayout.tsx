@@ -114,7 +114,7 @@ export function ResponsiveLayout({
               onClick={() => setSidebarOpen(false)}
             />
             <div className="fixed left-0 top-0 z-50 h-full w-64">
-              <Sidebar />
+              <Sidebar onLogout={() => { setSidebarOpen(false); onLogout?.(); }} />
             </div>
           </>
         )}
@@ -138,7 +138,7 @@ export function ResponsiveLayout({
   // Desktop layout: show sidebar + main content (exactly like original)
   return (
     <div className="flex min-h-screen bg-background">
-      <Sidebar />
+      <Sidebar onLogout={onLogout} />
       
       <main className={`flex-1 p-6 lg:p-8 ${className}`}>
         <div className={`${maxWidthClasses[maxWidth]} mx-auto`}>

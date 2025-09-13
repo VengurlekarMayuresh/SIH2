@@ -173,7 +173,12 @@ const InstituteDashboard: React.FC<InstituteDashboardProps> = ({ institutionData
               <Settings className="h-4 w-4 mr-1" />
               Settings
             </Button>
-            <Button variant="outline" size="sm" onClick={onLogout}>
+            <Button 
+              variant="destructive" 
+              size="sm" 
+              onClick={onLogout}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
               <LogOut className="h-4 w-4 mr-1" />
               Logout
             </Button>
