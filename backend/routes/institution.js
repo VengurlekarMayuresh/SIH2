@@ -314,6 +314,209 @@ router.get('/institution/analytics', authMiddleware, institutionOnly, async (req
     }
 });
 
+// Get live dashboard statistics
+router.get('/institution/live-stats', authMiddleware, institutionOnly, async (req, res) => {
+    try {
+        const StudentProgress = require('../models/StudentProgress');
+        const QuizAttempt = require('../models/QuizAttempt');
+        const Module = require('../models/Module');
+        
+        // Get all students for this institution
+        const students = await Student.find({ institutionId: req.user._id });
+        const studentIds = students.map(s => s._id);
+        
+        if (studentIds.length === 0) {
+            return res.json({
+                totalStudents: 0,
+                averageProgress: 0,
+                activeToday: 0,
+                completionRate: 0,
+                totalModulesCompleted: 0,
+                totalQuizzesTaken: 0,
+                averageQuizScore: 0,
+                studentsActiveThisWeek: 0
+            });
+        }
+        
+        // Get today's date for active users calculation
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        // Get this week's date
+        const thisWeek = new Date();
+        thisWeek.setDate(thisWeek.getDate() - 7);
+        
+        // Parallel queries for better performance
+        const [moduleProgressData, quizAttemptData, totalModules, activeToday, activeThisWeek] = await Promise.all([
+            // Get all module progress for institution students
+            StudentProgress.find({ 
+                student: { $in: studentIds } 
+            }),
+            
+            // Get all quiz attempts for institution students
+            QuizAttempt.find({ 
+                student: { $in: studentIds },
+                status: { $in: ['completed', 'submitted'] }
+            }),
+            
+            // Get total available modules
+            Module.countDocuments({ active: true }),
+            
+            // Get students active today (quiz attempts or module progress today)
+            Promise.all([
+                QuizAttempt.distinct('student', {
+                    student: { $in: studentIds },
+                    createdAt: { $gte: today, $lt: tomorrow }
+                }),
+                StudentProgress.distinct('student', {
+                    student: { $in: studentIds },
+                    updatedAt: { $gte: today, $lt: tomorrow }
+                })
+            ]).then(([quizStudents, progressStudents]) => {
+                return new Set([...quizStudents, ...progressStudents]).size;
+            }),
+            
+            // Get students active this week
+            Promise.all([
+                QuizAttempt.distinct('student', {
+                    student: { $in: studentIds },
+                    createdAt: { $gte: thisWeek }
+                }),
+                StudentProgress.distinct('student', {
+                    student: { $in: studentIds },
+                    updatedAt: { $gte: thisWeek }
+                })
+            ]).then(([quizStudents, progressStudents]) => {
+                return new Set([...quizStudents, ...progressStudents]).size;
+            })
+        ]);
+        
+        // Calculate statistics
+        const totalStudents = students.length;
+        const completedModules = moduleProgressData.filter(p => p.completed);
+        const totalModulesCompleted = completedModules.length;
+        
+        // Average progress calculation
+        const studentsWithProgress = {};
+        moduleProgressData.forEach(progress => {
+            const studentId = progress.student.toString();
+            if (!studentsWithProgress[studentId]) {
+                studentsWithProgress[studentId] = 0;
+            }
+            if (progress.completed) {
+                studentsWithProgress[studentId]++;
+            }
+        });
+        
+        const progressPercentages = Object.values(studentsWithProgress).map(completed => 
+            totalModules > 0 ? (completed / totalModules) * 100 : 0
+        );
+        const averageProgress = progressPercentages.length > 0 
+            ? Math.round(progressPercentages.reduce((sum, p) => sum + p, 0) / progressPercentages.length)
+            : 0;
+        
+        // Quiz statistics
+        const totalQuizzesTaken = quizAttemptData.length;
+        const averageQuizScore = quizAttemptData.length > 0 
+            ? Math.round(quizAttemptData.reduce((sum, attempt) => sum + attempt.score.percentage, 0) / quizAttemptData.length)
+            : 0;
+        
+        // Completion rate (students who completed at least one module)
+        const studentsWithCompletedModules = Object.keys(studentsWithProgress).filter(
+            studentId => studentsWithProgress[studentId] > 0
+        ).length;
+        const completionRate = totalStudents > 0 
+            ? Math.round((studentsWithCompletedModules / totalStudents) * 100)
+            : 0;
+        
+        res.json({
+            totalStudents,
+            averageProgress,
+            activeToday,
+            completionRate,
+            totalModulesCompleted,
+            totalQuizzesTaken,
+            averageQuizScore,
+            studentsActiveThisWeek: activeThisWeek,
+            lastUpdated: new Date()
+        });
+        
+    } catch (error) {
+        console.error('Live Stats Error:', error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Get recent activity for dashboard
+router.get('/institution/recent-activity', authMiddleware, institutionOnly, async (req, res) => {
+    try {
+        const StudentProgress = require('../models/StudentProgress');
+        const QuizAttempt = require('../models/QuizAttempt');
+        const Module = require('../models/Module');
+        
+        const limit = parseInt(req.query.limit) || 10;
+        
+        // Get recent quiz attempts and module completions
+        const students = await Student.find({ institutionId: req.user._id }).select('_id name class division rollNo');
+        const studentIds = students.map(s => s._id);
+        const studentMap = students.reduce((acc, student) => {
+            acc[student._id.toString()] = student;
+            return acc;
+        }, {});
+        
+        if (studentIds.length === 0) {
+            return res.json({ activities: [] });
+        }
+        
+        const [recentQuizzes, recentModules] = await Promise.all([
+            QuizAttempt.find({
+                student: { $in: studentIds },
+                status: { $in: ['completed', 'submitted'] }
+            })
+            .populate('quiz', 'title')
+            .sort({ createdAt: -1 })
+            .limit(limit),
+            
+            StudentProgress.find({
+                student: { $in: studentIds },
+                completed: true
+            })
+            .populate('module', 'title')
+            .sort({ updatedAt: -1 })
+            .limit(limit)
+        ]);
+        
+        // Combine and format activities
+        const activities = [
+            ...recentQuizzes.map(quiz => ({
+                type: 'quiz',
+                student: studentMap[quiz.student.toString()],
+                title: quiz.quiz?.title || 'Quiz',
+                score: quiz.score?.percentage || 0,
+                timestamp: quiz.createdAt,
+                icon: 'quiz'
+            })),
+            ...recentModules.map(module => ({
+                type: 'module',
+                student: studentMap[module.student.toString()],
+                title: module.module?.title || 'Module',
+                timestamp: module.updatedAt,
+                icon: 'module'
+            }))
+        ]
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+        .slice(0, limit);
+        
+        res.json({ activities });
+        
+    } catch (error) {
+        console.error('Recent Activity Error:', error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
 // Get specific student details for institution
 router.get('/institution/student/:studentId', authMiddleware, institutionOnly, async (req, res) => {
     try {
