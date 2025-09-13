@@ -15,6 +15,7 @@ const studentRouter = require('./routes/student');
 const modulesRouter = require('./routes/modules');
 const alertsRouter = require('./routes/alerts');
 const weatherRouter = require('./routes/weather');
+const chatbotRouter = require('./routes/chatbot');
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use('/api', studentRouter);
 app.use('/api', modulesRouter);
 app.use('/api', alertsRouter);
 app.use('/api', weatherRouter);
+app.use('/api/chatbot', chatbotRouter);
 
 // Health check
 app.get('/', (req, res) => {

@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
+const { authMiddleware, studentOnly } = require('../middleware');
 
 // OpenRouter API configuration
-const OPENROUTER_API_KEY = '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';
+const OPENROUTER_API_KEY = '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';
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
 // System prompt for disaster safety chatbot
@@ -27,7 +27,7 @@ Guidelines:
 Remember: You're helping students learn safety skills that could save lives.`;
 
 // Chat with AI endpoint
-router.post('/chat', auth, async (req, res) => {
+router.post('/chat', authMiddleware, studentOnly, async (req, res) => {
     try {
         const { message } = req.body;
         
@@ -111,7 +111,7 @@ Please try again or ask an adult for help!`;
 });
 
 // Get chat history (optional - can be implemented later)
-router.get('/history', auth, async (req, res) => {
+router.get('/history', authMiddleware, studentOnly, async (req, res) => {
     try {
         // For now, return empty history
         // Can be implemented with database storage later

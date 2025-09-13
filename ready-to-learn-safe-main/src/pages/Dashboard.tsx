@@ -10,6 +10,7 @@ import ResponsiveLayout from "@/components/ResponsiveLayout";
 import AlertDisplay from "@/components/AlertDisplay";
 import WeatherWidget from "@/components/WeatherWidget";
 import DisasterAlertSystem from "@/components/DisasterAlertSystem";
+import ChatBot from "@/components/ChatBot";
 import { useIsMobile } from "@/hooks/use-mobile";
 import axios from "axios";
 import { 
@@ -573,6 +574,9 @@ const Dashboard = () => {
               )}
             </div>
           </div>
+          
+          {/* Floating ChatBot */}
+          <ChatBot />
     </ResponsiveLayout>
   );
 };
