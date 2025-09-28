@@ -12,7 +12,7 @@ import WeatherWidget from "@/components/WeatherWidget";
 import DisasterAlertSystem from "@/components/DisasterAlertSystem";
 import ChatBot from "@/components/ChatBot";
 import { useIsMobile } from "@/hooks/use-mobile";
-import axios from "axios";
+import { api } from '@/utils/api';
 import { 
   BookOpen, 
   HelpCircle, 
@@ -88,9 +88,7 @@ const Dashboard = () => {
       }
 
       console.log('Making API call to /api/student/dashboard-data');
-      const response = await axios.get('/api/student/dashboard-data', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.student.getDashboardData();
       
       console.log('Dashboard data received:', response.data);
       setDashboardData(response.data);
@@ -148,9 +146,7 @@ const Dashboard = () => {
       const token = localStorage.getItem('authToken');
       if (token) {
         // Call backend logout endpoint
-        await axios.post('/api/student/logout', {}, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await api.auth.studentLogout();
       }
     } catch (error) {
       // Even if backend logout fails, we still logout on frontend

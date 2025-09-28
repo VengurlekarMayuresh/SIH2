@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import axios from 'axios';
-
-const API_BASE_URL = 'http://localhost:5001/api';
+import { apiClient } from '@/utils/api';
 
 interface LiveStats {
   totalStudents: number;
@@ -47,18 +45,10 @@ export const useLiveStats = (refreshInterval: number = 30000): UseLiveStatsRetur
 
   const fetchStats = useCallback(async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        setError('No authentication token found');
-        return;
-      }
-
-      const headers = { Authorization: `Bearer ${token}` };
-
       // Fetch both stats and activities in parallel
       const [statsResponse, activitiesResponse] = await Promise.all([
-        axios.get(`${API_BASE_URL}/institution/live-stats`, { headers }),
-        axios.get(`${API_BASE_URL}/institution/recent-activity?limit=10`, { headers })
+        apiClient.get('/institution/live-stats'),
+        apiClient.get('/institution/recent-activity?limit=10')
       ]);
 
       setStats(statsResponse.data);

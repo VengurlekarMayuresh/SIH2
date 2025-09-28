@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Upload, X, CheckCircle, AlertCircle, Film, Cloud } from 'lucide-react';
-import axios from 'axios';
+import { apiClient } from '@/utils/api';
 
 interface VideoUploadProps {
   onVideoUploaded: (videoData: VideoData) => void;
@@ -123,11 +123,9 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
     formData.append('description', 'Educational video uploaded to SafeEd platform');
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post('/api/institution/upload-video', formData, {
+      const response = await apiClient.post('/institution/upload-video', formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'multipart/form-data'
         },
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {
@@ -164,15 +162,10 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
     setError(null);
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post('/api/institution/upload-video-from-url', {
+      const response = await apiClient.post('/institution/upload-video-from-url', {
         videoUrl: urlUpload,
         title: 'Imported Video',
         description: 'Video imported from URL to SafeEd platform'
-      }, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
       });
 
       if (response.data.video) {

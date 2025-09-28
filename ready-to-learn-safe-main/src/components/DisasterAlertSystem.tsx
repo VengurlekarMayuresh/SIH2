@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { apiClient } from '@/utils/api';
 import useLocation from '@/hooks/useLocation';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +35,7 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
-const API_BASE_URL = 'http://localhost:5001/api';
+// API calls now use centralized API client
 
 interface DisasterAlert {
   headline: string;
@@ -214,13 +214,6 @@ const DisasterAlertSystem: React.FC<DisasterAlertSystemProps> = ({
 
     try {
       setError(null);
-      const token = localStorage.getItem('authToken');
-      
-      if (!token) {
-        setError('Authentication required');
-        return;
-      }
-
       let query: string;
       
       // Build query based on location source
@@ -237,13 +230,11 @@ const DisasterAlertSystem: React.FC<DisasterAlertSystemProps> = ({
 
       // Fetch disaster alerts and risk assessment with location
       const [alertsResponse, assessmentResponse] = await Promise.allSettled([
-        axios.get(`${API_BASE_URL}/disaster/alerts/location`, {
-          params: { q: query },
-          headers: { Authorization: `Bearer ${token}` }
+        apiClient.get('/disaster/alerts/location', {
+          params: { q: query }
         }),
-        axios.get(`${API_BASE_URL}/disaster/assessment/location`, {
-          params: { q: query },
-          headers: { Authorization: `Bearer ${token}` }
+        apiClient.get('/disaster/assessment/location', {
+          params: { q: query }
         })
       ]);
 
@@ -262,12 +253,8 @@ const DisasterAlertSystem: React.FC<DisasterAlertSystemProps> = ({
         try {
           console.log('🏫 Falling back to institution-based alerts');
           const [instAlertsResponse, instAssessmentResponse] = await Promise.allSettled([
-            axios.get(`${API_BASE_URL}/disaster/alerts`, {
-              headers: { Authorization: `Bearer ${token}` }
-            }),
-            axios.get(`${API_BASE_URL}/disaster/assessment`, {
-              headers: { Authorization: `Bearer ${token}` }
-            })
+            apiClient.get('/disaster/alerts'),
+            apiClient.get('/disaster/assessment')
           ]);
 
           if (instAlertsResponse.status === 'fulfilled' && instAlertsResponse.value.data.success) {

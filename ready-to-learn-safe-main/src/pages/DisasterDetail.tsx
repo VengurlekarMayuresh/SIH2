@@ -1,13 +1,10 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Sidebar from "@/components/Sidebar";
 import { ArrowLeft, Clock, Users, AlertTriangle, CheckCircle, BookOpen, Loader2, Play, FileText, ChevronRight, Calendar, Award } from "lucide-react";
-
-// API Base URL
-const API_BASE_URL = 'http://localhost:5001/api';
+import { apiClient } from '../utils/api';
 
 // Types for the dynamic module data
 interface Content {
@@ -123,11 +120,7 @@ const DisasterDetail = () => {
           return;
         }
 
-        const response = await axios.get(`${API_BASE_URL}/modules/${id}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await apiClient.get(`/modules/${id}`);
 
         setModule(response.data);
       } catch (err: any) {
@@ -151,14 +144,9 @@ const DisasterDetail = () => {
     if (!module || !isAuthenticated) return;
 
     try {
-      const token = localStorage.getItem('authToken');
-      await axios.post(`${API_BASE_URL}/student/progress`, {
+      await apiClient.post('/student/progress', {
         moduleId: module._id,
         completed: true
-      }, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
       });
       
       // Show success message (you could add a toast notification here)

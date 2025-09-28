@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import Sidebar from "@/components/Sidebar";
+import { apiClient } from '../utils/api';
 import { 
   Plus,
   Edit,
@@ -133,18 +134,8 @@ const QuizManager = () => {
   const fetchQuiz = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:5001/api/institution/quizzes/${quizId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch quiz');
-      }
-
-      const backendQuiz = await response.json();
+      const response = await apiClient.get(`/institution/quizzes/${quizId}`);
+      const backendQuiz = response.data;
       
       // Transform backend data to frontend format
       const frontendQuiz = {
@@ -234,27 +225,11 @@ const QuizManager = () => {
         createdBy: 'system'
       };
 
-      const url = quizId === 'new' 
-        ? 'http://localhost:5001/api/institution/quizzes'
-        : `http://localhost:5001/api/institution/quizzes/${quiz.id}`;
+      const response = quizId === 'new' 
+        ? await apiClient.post('/institution/quizzes', transformedQuiz)
+        : await apiClient.put(`/institution/quizzes/${quiz.id}`, transformedQuiz);
       
-      const method = quizId === 'new' ? 'POST' : 'PUT';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(transformedQuiz)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to save quiz' }));
-        throw new Error(errorData.message || 'Failed to save quiz');
-      }
-
-      const data = await response.json();
+      const data = response.data;
       
       // Transform the backend response back to frontend format
       const backendQuiz = data;
@@ -395,23 +370,11 @@ const QuizManager = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:5001/api/institution/quizzes/${quiz.id}/status`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 
-          status: quiz.isActive ? 'draft' : 'published' 
-        })
+      const response = await apiClient.put(`/institution/quizzes/${quiz.id}/status`, { 
+        status: quiz.isActive ? 'draft' : 'published' 
       });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Failed to update quiz status' }));
-        throw new Error(error.message || 'Failed to update quiz status');
-      }
-
-      const data = await response.json();
+      
+      const data = response.data;
       
       // Update local state
       setQuiz(prev => prev ? { ...prev, isActive: !prev.isActive } : prev);

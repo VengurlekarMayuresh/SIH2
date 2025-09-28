@@ -1,14 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { apiClient } from '@/utils/api';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import ResponsiveLayout from "@/components/ResponsiveLayout";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Zap, Waves, Flame, Wind, Shield, BookOpen, Loader2, Users, ArrowRight, ArrowLeft, Filter, Search, Grid, List } from "lucide-react";
 
-// API Base URL (using vite proxy)
-const API_BASE_URL = '/api';
+// API calls now use centralized API client
 
 // Types
 interface Module {
@@ -82,8 +81,8 @@ const DisasterModules = () => {
         setError('');
         
         // Fetch modules (public endpoint)
-        console.log('Fetching modules from:', `${API_BASE_URL}/modules`);
-        const modulesResponse = await axios.get(`${API_BASE_URL}/modules`);
+        console.log('Fetching modules from API client');
+        const modulesResponse = await apiClient.get('/modules');
         console.log('Modules fetched successfully:', modulesResponse.data);
         setModules(modulesResponse.data);
         
@@ -93,11 +92,7 @@ const DisasterModules = () => {
         
         if (token && userType === 'student') {
           try {
-            const progressResponse = await axios.get(`${API_BASE_URL}/student/progress`, {
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
-            });
+            const progressResponse = await apiClient.get('/student/progress');
             setUserProgress(progressResponse.data);
           } catch (progressError) {
             // Progress fetch failed, continue without progress data
@@ -107,7 +102,7 @@ const DisasterModules = () => {
         
       } catch (err: any) {
         console.error('Error fetching modules:', err);
-        console.error('API URL:', `${API_BASE_URL}/modules`);
+        console.error('API client used for modules');
         console.error('Error details:', err.response);
         setError(err.response?.data?.message || 'Failed to load modules. Please try again.');
       } finally {

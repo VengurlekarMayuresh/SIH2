@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import { CheckCircle2 } from 'lucide-react';
+import { apiClient } from '../utils/api';
 
 interface ProgressData {
   userId: string;
@@ -138,26 +140,15 @@ class ProgressTracker {
       const dataToSync = [...this.progressQueue];
       this.progressQueue = [];
 
-      // Send to backend
-      const response = await fetch('/api/student/progress/batch', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        },
-        body: JSON.stringify(dataToSync)
-      });
-
-      if (!response.ok) {
-        // Re-add to queue on failure
-        this.progressQueue.unshift(...dataToSync);
-        throw new Error('Failed to sync progress');
-      }
+      // Send to backend using apiClient
+      await apiClient.post('/student/progress/batch', dataToSync);
 
       // Clear local storage on successful sync
       localStorage.removeItem('progressQueue');
     } catch (error) {
       console.error('Progress sync failed:', error);
+      // Re-add to queue on failure
+      this.progressQueue.unshift(...dataToSync);
       // Data remains in queue for next sync attempt
     }
   }
@@ -330,17 +321,9 @@ export const useProgressTracking = () => {
   // Get current progress for a module
   const getModuleProgress = useCallback(async (moduleId: string): Promise<ModuleProgress | null> => {
     try {
-      const response = await fetch(`/api/student/progress/${moduleId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        }
-      });
-      
-      if (response.ok) {
-        const progress = await response.json();
-        setCurrentProgress(progress);
-        return progress;
-      }
+      const response = await apiClient.get(`/student/progress/${moduleId}`);
+      setCurrentProgress(response.data);
+      return response.data;
     } catch (error) {
       console.error('Failed to fetch progress:', error);
     }

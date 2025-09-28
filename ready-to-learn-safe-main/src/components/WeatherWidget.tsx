@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { apiClient } from '@/utils/api';
 import useLocation from '@/hooks/useLocation';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +32,7 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
-const API_BASE_URL = 'http://localhost:5001/api';
+// API calls now use centralized API client
 
 interface WeatherData {
   location: {
@@ -156,36 +156,25 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
 
     try {
       setError(null);
-      const token = localStorage.getItem('authToken');
-      
-      if (!token) {
-        setError('Authentication required');
-        return;
-      }
-
       let weatherResponse;
       
       // Use coordinates for GPS location, city name for others
       if (location.source === 'gps' && location.latitude && location.longitude) {
         console.log('🌤️ Fetching weather for GPS coordinates:', location.latitude, location.longitude);
         const query = `${location.latitude},${location.longitude}`;
-        weatherResponse = await axios.get(`${API_BASE_URL}/weather/location`, {
-          params: { q: query, aqi: 'yes' },
-          headers: { Authorization: `Bearer ${token}` }
+        weatherResponse = await apiClient.get('/weather/location', {
+          params: { q: query, aqi: 'yes' }
         });
       } else if (location.city && location.region) {
         console.log('🌤️ Fetching weather for city:', `${location.city}, ${location.region}`);
         const query = `${location.city}, ${location.region}, ${location.country || 'India'}`;
-        weatherResponse = await axios.get(`${API_BASE_URL}/weather/location`, {
-          params: { q: query, aqi: 'yes' },
-          headers: { Authorization: `Bearer ${token}` }
+        weatherResponse = await apiClient.get('/weather/location', {
+          params: { q: query, aqi: 'yes' }
         });
       } else {
         // Fallback to institution weather endpoint
         console.log('🏫 Falling back to institution weather');
-        weatherResponse = await axios.get(`${API_BASE_URL}/weather/current`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        weatherResponse = await apiClient.get('/weather/current');
       }
 
       if (weatherResponse.data.success) {

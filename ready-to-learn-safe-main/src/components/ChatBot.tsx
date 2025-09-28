@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { MessageCircle, X, Send, Bot, User, Loader2 } from 'lucide-react';
-import axios from 'axios';
+import { api } from '@/utils/api';
 
 interface Message {
   id: string;
@@ -65,21 +65,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
     setIsLoading(true);
 
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}/chatbot/chat`,
-        { message: currentMessage },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      const response = await api.chatbot.sendMessage(currentMessage);
 
       if (response.data.success) {
         const botMessage: Message = {

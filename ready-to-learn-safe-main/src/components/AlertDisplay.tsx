@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { apiClient } from '@/utils/api';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -17,7 +17,7 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
-const API_BASE_URL = 'http://localhost:5001/api';
+// API calls now use centralized API client
 
 interface AlertData {
   _id: string;
@@ -76,10 +76,10 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({
       if (targetAudience) params.append('targetAudience', targetAudience);
       if (studentClass) params.append('targetClass', studentClass);
 
-      const url = `${API_BASE_URL}/alerts/active/${institutionId}?${params}`;
+      const url = `/alerts/active/${institutionId}?${params}`;
       console.log('AlertDisplay: Making request to:', url);
       
-      const response = await axios.get(url);
+      const response = await apiClient.get(url);
       
       console.log('AlertDisplay: Received response:', response.data);
       setAlerts(response.data.alerts || []);
@@ -88,7 +88,7 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({
         message: err.message,
         status: err.response?.status,
         data: err.response?.data,
-        url: `${API_BASE_URL}/alerts/active/${institutionId}`
+        url: `/alerts/active/${institutionId}`
       });
       setError(`Failed to load alerts: ${err.response?.data?.message || err.message}`);
     } finally {

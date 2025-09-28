@@ -7,7 +7,7 @@ import { Trophy, Star, BookOpen, Award, TrendingUp, Calendar, Loader2, ArrowLeft
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { api } from '@/utils/api';
 
 interface ProgressStats {
   completedModules: number;
@@ -90,9 +90,7 @@ const Progress = () => {
           return;
         }
 
-        const response = await axios.get('/api/student/progress-dashboard', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await api.student.getProgress();
         
         setProgressData(response.data);
       } catch (err: any) {

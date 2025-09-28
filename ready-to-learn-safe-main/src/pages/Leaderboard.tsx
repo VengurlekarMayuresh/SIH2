@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiClient } from '@/utils/api';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -96,18 +97,8 @@ const Leaderboard = () => {
   // Fetch leaderboard data
   const fetchLeaderboard = async (type: 'global' | 'institutional') => {
     try {
-      const response = await fetch(`/api/leaderboard/${type}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch leaderboard');
-      }
-
-      const data = await response.json();
+      const response = await apiClient.get(`/leaderboard/${type}`);
+      const data = response.data;
       setLeaderboardData(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load leaderboard');
@@ -117,18 +108,8 @@ const Leaderboard = () => {
   // Fetch student ranking details
   const fetchStudentRanking = async () => {
     try {
-      const response = await fetch('/api/student/ranking', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch student ranking');
-      }
-
-      const data = await response.json();
+      const response = await apiClient.get('/student/ranking');
+      const data = response.data;
       setStudentRanking(data);
     } catch (err) {
       console.error('Error fetching student ranking:', err);

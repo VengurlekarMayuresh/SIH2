@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiClient } from '@/utils/api';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -102,27 +103,9 @@ const QuizCards = () => {
         ...filters
       });
 
-      const response = await fetch(`http://localhost:5001/api/student/quizzes?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await apiClient.get(`/student/quizzes?${params}`);
 
-      if (!response.ok) {
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('text/html')) {
-          throw new Error('Backend API not available. Please ensure the backend server is running on port 5000.');
-        }
-        throw new Error(`Failed to fetch quizzes: ${response.status} ${response.statusText}`);
-      }
-
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Expected JSON response but received HTML. Please check if the backend API is properly configured.');
-      }
-
-      const data: QuizCardsData = await response.json();
+      const data: QuizCardsData = response.data;
       setQuizzes(data.quizzes);
       setPagination(data.pagination);
     } catch (err) {
@@ -181,20 +164,8 @@ const QuizCards = () => {
   const startQuiz = async (quizId: string) => {
     try {
       // Start quiz attempt
-      const response = await fetch('http://localhost:5001/api/student/quiz/start', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ quizId })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to start quiz');
-      }
-
-      const data = await response.json();
+      const response = await apiClient.post('/student/quiz/start', { quizId });
+      const data = response.data;
       // Navigate to quiz taking interface
       navigate(`/quiz/${quizId}/attempt/${data.attemptId}`);
     } catch (err) {

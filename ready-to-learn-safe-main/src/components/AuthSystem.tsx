@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { api, API_BASE_URL } from '@/utils/api';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,8 +34,7 @@ import {
 } from 'lucide-react';
 import { ThemeToggle } from './theme-toggle';
 
-// API Base URL
-const API_BASE_URL = 'http://localhost:5001/api';
+// API Base URL is now imported from centralized config
 
 // Types
 interface User {
@@ -156,11 +155,9 @@ const AuthSystem = () => {
     setError('');
     
     try {
-      const endpoint = activeTab === 'student' 
-        ? `${API_BASE_URL}/student/login`
-        : `${API_BASE_URL}/institution/login`;
-      
-      const response = await axios.post<AuthResponse>(endpoint, signInData);
+      const response = activeTab === 'student'
+        ? await api.auth.studentLogin(signInData)
+        : await api.auth.institutionLogin(signInData);
       const { token, student, institution, message } = response.data;
       
       // Store authentication data
@@ -189,10 +186,7 @@ const AuthSystem = () => {
     setError('');
     
     try {
-      const response = await axios.post<AuthResponse>(
-        `${API_BASE_URL}/institution/register`, 
-        institutionSignUpData
-      );
+      const response = await api.auth.institutionRegister(institutionSignUpData);
       const { token, institution, message } = response.data;
       
       localStorage.setItem('authToken', token);
@@ -219,10 +213,7 @@ const AuthSystem = () => {
     setError('');
     
     try {
-      const response = await axios.post<AuthResponse>(
-        `${API_BASE_URL}/student/register`, 
-        studentSignUpData
-      );
+      const response = await api.auth.studentRegister(studentSignUpData);
       const { token, student, message } = response.data;
       
       localStorage.setItem('authToken', token);
@@ -254,13 +245,11 @@ const AuthSystem = () => {
       const token = localStorage.getItem('authToken');
       if (token && userType) {
         // Call backend logout endpoint
-        const endpoint = userType === 'student' 
-          ? `${API_BASE_URL}/student/logout`
-          : `${API_BASE_URL}/institution/logout`;
-          
-        await axios.post(endpoint, {}, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        if (userType === 'student') {
+          await api.auth.studentLogout();
+        } else {
+          await api.auth.institutionLogout();
+        }
       }
     } catch (error) {
       // Even if backend logout fails, we still logout on frontend

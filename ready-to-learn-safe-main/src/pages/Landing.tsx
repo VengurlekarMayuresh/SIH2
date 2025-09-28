@@ -22,7 +22,7 @@ const Landing = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Shield className="h-7 w-7 md:h-8 md:w-8 text-primary" />
-              <span className="text-xl md:text-2xl font-bold text-primary">SafeEd</span>
+              <span className="text-xl md:text-2xl font-bold text-primary">Raksha Setu</span>
             </div>
             <div className="flex items-center gap-2 md:gap-3">
               <ThemeToggle />
@@ -177,7 +177,7 @@ const Landing = () => {
       {/* Footer */}
       <footer className="container mx-auto px-4 py-8 mt-20 border-t border-border">
         <div className="text-center text-muted-foreground">
-          <p>&copy; 2024 SafeEd - Disaster Preparedness Education System</p>
+          <p>&copy; 2024 Raksha Setu - Disaster Preparedness Education System</p>
         </div>
       </footer>
     </div>

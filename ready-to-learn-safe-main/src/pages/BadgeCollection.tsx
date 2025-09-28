@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiClient } from '@/utils/api';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -89,18 +90,8 @@ const BadgeCollection = () => {
   // Fetch earned badges
   const fetchEarnedBadges = async () => {
     try {
-      const response = await fetch('/api/student/badges', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch earned badges');
-      }
-
-      const data: BadgeCollectionData = await response.json();
+      const response = await apiClient.get('/student/badges');
+      const data: BadgeCollectionData = response.data;
       setEarnedBadges(data.badges);
       setStats(data.stats);
     } catch (err) {
@@ -111,18 +102,8 @@ const BadgeCollection = () => {
   // Fetch available badges
   const fetchAvailableBadges = async () => {
     try {
-      const response = await fetch('/api/badges', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch available badges');
-      }
-
-      const data: AvailableBadge[] = await response.json();
+      const response = await apiClient.get('/badges');
+      const data: AvailableBadge[] = response.data;
       setAvailableBadges(data);
     } catch (err) {
       console.error('Error fetching available badges:', err);

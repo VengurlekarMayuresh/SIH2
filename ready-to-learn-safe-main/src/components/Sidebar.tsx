@@ -25,7 +25,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout }) => {
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-2">
             <Shield className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold text-primary">SafeEd</span>
+            <span className="text-2xl font-bold text-primary">Raksha Setu</span>
           </div>
           <SimpleThemeToggle />
         </div>

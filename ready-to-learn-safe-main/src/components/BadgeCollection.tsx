@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiClient } from '../utils/api';
 import {
   Trophy,
   Award,
@@ -89,18 +90,8 @@ const BadgeCollection = () => {
   // Fetch earned badges
   const fetchEarnedBadges = async () => {
     try {
-      const response = await fetch('/api/student/badges', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch earned badges');
-      }
-
-      const data: BadgeCollectionData = await response.json();
+      const response = await apiClient.get('/student/badges');
+      const data: BadgeCollectionData = response.data;
       setEarnedBadges(data.badges);
       setStats(data.stats);
     } catch (err) {
@@ -111,18 +102,8 @@ const BadgeCollection = () => {
   // Fetch available badges
   const fetchAvailableBadges = async () => {
     try {
-      const response = await fetch('/api/badges', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch available badges');
-      }
-
-      const data: AvailableBadge[] = await response.json();
+      const response = await apiClient.get('/badges');
+      const data: AvailableBadge[] = response.data;
       setAvailableBadges(data);
     } catch (err) {
       console.error('Error fetching available badges:', err);

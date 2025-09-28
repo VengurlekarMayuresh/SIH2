@@ -20,23 +20,56 @@ const chatbotRouter = require('./routes/chatbot');
 const app = express();
 
 // Middleware
-// Robust CORS: allow common local dev ports and env override
-const allowedOrigins = [
-    process.env.FRONTEND_URL || "http://localhost:8080",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:8080"
-];
+// Production-ready CORS configuration
+const getAllowedOrigins = () => {
+    // In production, use only specified origins
+    if (process.env.NODE_ENV === 'production') {
+        const origins = [];
+        if (process.env.FRONTEND_URL) origins.push(process.env.FRONTEND_URL);
+        if (process.env.ALLOWED_ORIGINS) {
+            origins.push(...process.env.ALLOWED_ORIGINS.split(','));
+        }
+        return origins.length > 0 ? origins : [process.env.FRONTEND_URL || 'https://localhost'];
+    }
+    
+    // In development, allow common local dev ports
+    return [
+        process.env.FRONTEND_URL || "http://localhost:8080",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:8080",
+        "http://localhost:3000", // React default
+        "http://localhost:5000"  // Alternative port
+    ];
+};
+
+const allowedOrigins = getAllowedOrigins();
 app.use(cors({
     origin: function (origin, callback) {
-        if (!origin) return callback(null, true); // allow curl/postman/no-origin
-        if (allowedOrigins.includes(origin)) return callback(null, true);
-        // Allow any localhost port during dev
-        const localhostMatch = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
-        if (localhostMatch) return callback(null, true);
-        return callback(new Error('CORS not allowed from origin: ' + origin), false);
+        // Allow requests with no origin (mobile apps, curl, Postman, etc.)
+        if (!origin) return callback(null, true);
+        
+        // Check if origin is in allowed list
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        
+        // In development, allow any localhost port
+        if (process.env.NODE_ENV !== 'production') {
+            const localhostMatch = /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
+            if (localhostMatch) {
+                console.log(`✅ CORS: Allowing dev origin: ${origin}`);
+                return callback(null, true);
+            }
+        }
+        
+        console.error(`❌ CORS: Origin not allowed: ${origin}`);
+        console.log(`📋 CORS: Allowed origins:`, allowedOrigins);
+        return callback(new Error(`CORS not allowed from origin: ${origin}`), false);
     },
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 
@@ -51,7 +84,7 @@ app.use('/api/chatbot', chatbotRouter);
 // Health check
 app.get('/', (req, res) => {
     res.json({ 
-        message: "🚨 SafeEd API is running!",
+        message: "🚨 Raksha Setu API is running!",
         status: "success"
     });
 });

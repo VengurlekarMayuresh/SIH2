@@ -9,6 +9,7 @@ import FireDrill from "@/components/drills/FireDrill";
 import EarthquakeDrill from "@/components/drills/EarthquakeDrill";
 import HealthCrisisDrill from "@/components/drills/HealthCrisisDrill";
 import SevereWeatherDrill from "@/components/drills/SevereWeatherDrill";
+import { apiClient } from '../utils/api';
 import { 
   Shield, 
   Waves, 
@@ -105,26 +106,15 @@ const VirtualDrills = () => {
       const token = localStorage.getItem('authToken');
       if (token) {
         // Save drill completion to backend
-        const response = await fetch('/api/student/virtual-drill-complete', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            drillId: selectedDrill.id,
-            drillType: selectedDrill.title,
-            score: score,
-            passed: passed,
-            completedAt: new Date().toISOString()
-          })
+        await apiClient.post('/student/virtual-drill-complete', {
+          drillId: selectedDrill.id,
+          drillType: selectedDrill.title,
+          score: score,
+          passed: passed,
+          completedAt: new Date().toISOString()
         });
 
-        if (response.ok) {
-          console.log('Drill completion saved successfully');
-        } else {
-          console.error('Failed to save drill completion');
-        }
+        console.log('Drill completion saved successfully');
       }
     } catch (error) {
       console.error('Error saving drill completion:', error);

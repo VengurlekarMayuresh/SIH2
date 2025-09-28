@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,9 +15,7 @@ import {
   BookOpen,
   Users
 } from 'lucide-react';
-
-// API Base URL
-const API_BASE_URL = 'http://localhost:5001/api';
+import { apiClient } from '../utils/api';
 
 // Types
 interface User {
@@ -136,10 +133,10 @@ const AuthPage = () => {
     
     try {
       const endpoint = activeTab === 'student' 
-        ? `${API_BASE_URL}/student/login`
-        : `${API_BASE_URL}/institution/login`;
+        ? '/student/login'
+        : '/institution/login';
       
-      const response = await axios.post<AuthResponse>(endpoint, signInData);
+      const response = await apiClient.post(endpoint, signInData);
       const { token, student, institution } = response.data;
       
       // Store authentication data
@@ -186,8 +183,8 @@ const AuthPage = () => {
     setError('');
     
     try {
-      const response = await axios.post<AuthResponse>(
-        `${API_BASE_URL}/institution/register`, 
+      const response = await apiClient.post(
+        '/institution/register', 
         institutionSignUpData
       );
       const { token, institution } = response.data;
@@ -234,8 +231,8 @@ const AuthPage = () => {
     setError('');
     
     try {
-      const response = await axios.post<AuthResponse>(
-        `${API_BASE_URL}/student/register`, 
+      const response = await apiClient.post(
+        '/student/register', 
         studentSignUpData
       );
       const { token, student } = response.data;
@@ -317,7 +314,7 @@ const AuthPage = () => {
                 <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6 backdrop-blur-sm">
                   <Shield className="h-12 w-12 text-white" />
                 </div>
-                <h2 className="text-3xl font-bold mb-4">Welcome to SafeEd</h2>
+                <h2 className="text-3xl font-bold mb-4">Welcome to Raksha Setu</h2>
                 <p className="text-lg opacity-90 leading-relaxed">
                   Join our community of learners and educators dedicated to disaster preparedness and safety education.
                 </p>
@@ -353,7 +350,7 @@ const AuthPage = () => {
                     {isSignUp ? 'Create Account' : 'Welcome Back'}
                   </h1>
                   <p className="text-gray-600">
-                    {isSignUp ? 'Join the SafeEd community today' : 'Sign in to your account'}
+                    {isSignUp ? 'Join the Raksha Setu community today' : 'Sign in to your account'}
                   </p>
                 </div>
 

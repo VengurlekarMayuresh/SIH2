@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { apiClient } from '@/utils/api';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
-const API_BASE_URL = 'http://localhost:5001/api';
+// API calls now use centralized API client
 
 interface AlertData {
   _id: string;
@@ -97,20 +97,11 @@ const AlertManagement: React.FC<AlertManagementProps> = ({ institutionData }) =>
     setLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('authToken');
-      console.log('AlertManagement: Fetching alerts with token:', token ? 'exists' : 'missing');
-      
       const params = new URLSearchParams();
       if (filterType !== 'all') params.append('type', filterType);
       if (filterPriority !== 'all') params.append('priority', filterPriority);
-
-      const url = `${API_BASE_URL}/alerts?${params}`;
-      console.log('AlertManagement: Making request to:', url);
       
-      const response = await axios.get(
-        url,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await apiClient.get(`/alerts?${params}`);
       
       console.log('AlertManagement: Received response:', response.data);
       setAlerts(response.data.alerts);
@@ -138,7 +129,6 @@ const AlertManagement: React.FC<AlertManagementProps> = ({ institutionData }) =>
     setSuccess('');
 
     try {
-      const token = localStorage.getItem('authToken');
       const payload = {
         ...formData,
         expiresAt: formData.expiresAt ? formData.expiresAt.toISOString() : null
@@ -146,19 +136,11 @@ const AlertManagement: React.FC<AlertManagementProps> = ({ institutionData }) =>
 
       if (editingAlert) {
         // Update existing alert
-        await axios.put(
-          `${API_BASE_URL}/alerts/${editingAlert._id}`,
-          payload,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        await apiClient.put(`/alerts/${editingAlert._id}`, payload);
         setSuccess('Alert updated successfully');
       } else {
         // Create new alert
-        await axios.post(
-          `${API_BASE_URL}/alerts`,
-          payload,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        await apiClient.post('/alerts', payload);
         setSuccess('Alert created successfully');
       }
 
@@ -208,11 +190,7 @@ const AlertManagement: React.FC<AlertManagementProps> = ({ institutionData }) =>
     if (!confirm('Are you sure you want to delete this alert?')) return;
 
     try {
-      const token = localStorage.getItem('authToken');
-      await axios.delete(
-        `${API_BASE_URL}/alerts/${alertId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await apiClient.delete(`/alerts/${alertId}`);
       setSuccess('Alert deleted successfully');
       fetchAlerts();
     } catch (err: any) {
@@ -223,12 +201,7 @@ const AlertManagement: React.FC<AlertManagementProps> = ({ institutionData }) =>
   // Toggle alert status
   const handleToggle = async (alertId: string) => {
     try {
-      const token = localStorage.getItem('authToken');
-      await axios.patch(
-        `${API_BASE_URL}/alerts/${alertId}/toggle`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await apiClient.patch(`/alerts/${alertId}/toggle`, {});
       setSuccess('Alert status updated');
       fetchAlerts();
     } catch (err: any) {

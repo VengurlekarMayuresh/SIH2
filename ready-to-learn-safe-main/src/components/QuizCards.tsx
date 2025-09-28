@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiClient } from '../utils/api';
 import {
   Search,
   Filter,
@@ -99,18 +100,8 @@ const QuizCards = () => {
         ...filters
       });
 
-      const response = await fetch(`/api/quizzes?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch quizzes');
-      }
-
-      const data: QuizCardsData = await response.json();
+      const response = await apiClient.get(`/quizzes?${params}`);
+      const data: QuizCardsData = response.data;
       setQuizzes(data.quizzes);
       setPagination(data.pagination);
     } catch (err) {
@@ -121,18 +112,8 @@ const QuizCards = () => {
   // Fetch featured quizzes
   const fetchFeaturedQuizzes = async () => {
     try {
-      const response = await fetch('/api/quizzes/featured', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch featured quizzes');
-      }
-
-      const data: FeaturedData = await response.json();
+      const response = await apiClient.get('/quizzes/featured');
+      const data: FeaturedData = response.data;
       setFeaturedQuizzes(data.featured);
     } catch (err) {
       console.error('Error fetching featured quizzes:', err);
@@ -192,20 +173,8 @@ const QuizCards = () => {
   const startQuiz = async (quizId: string) => {
     try {
       // Start quiz attempt
-      const response = await fetch('/api/student/quiz/start', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ quizId })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to start quiz');
-      }
-
-      const data = await response.json();
+      const response = await apiClient.post('/student/quiz/start', { quizId });
+      const data = response.data;
       // Navigate to quiz taking interface
       navigate(`/quiz/${quizId}/attempt/${data.attemptId}`);
     } catch (err) {

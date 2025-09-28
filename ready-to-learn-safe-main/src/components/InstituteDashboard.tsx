@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { api, apiClient } from '@/utils/api';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +38,7 @@ import RecentActivityFeed from './RecentActivityFeed';
 import { useLiveStats, useStatsRefresh } from '../hooks/useLiveStats';
 import { ThemeToggle } from './theme-toggle';
 
-const API_BASE_URL = 'http://localhost:5001/api';
+// API calls now use centralized API client
 
 interface Student {
   _id: string;
@@ -95,7 +95,6 @@ const InstituteDashboard: React.FC<InstituteDashboardProps> = ({ institutionData
     setLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('authToken');
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: '10'
@@ -104,9 +103,8 @@ const InstituteDashboard: React.FC<InstituteDashboardProps> = ({ institutionData
       if (selectedClass !== 'all') params.append('class', selectedClass);
       if (selectedDivision !== 'all') params.append('division', selectedDivision);
 
-      const response = await axios.get(
-        `${API_BASE_URL}/institution/students-progress?${params}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const response = await apiClient.get(
+        `/institution/students-progress?${params}`
       );
       
       setStudents(response.data.students);
@@ -121,11 +119,7 @@ const InstituteDashboard: React.FC<InstituteDashboardProps> = ({ institutionData
   // Fetch analytics data
   const fetchAnalytics = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await axios.get(
-        `${API_BASE_URL}/institution/analytics`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await api.institution.getAnalytics();
       setAnalytics(response.data.analytics);
     } catch (err: any) {
       console.error('Analytics fetch error:', err);

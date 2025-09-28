@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { apiClient } from '@/utils/api';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -134,30 +135,14 @@ const QuizOverview = () => {
         setLoading(true);
         
         // Fetch quiz details
-        const quizResponse = await fetch(`/api/quizzes/${quizId}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!quizResponse.ok) {
-          throw new Error('Failed to fetch quiz data');
-        }
-
-        const quizData = await quizResponse.json();
+        const quizResponse = await apiClient.get(`/quizzes/${quizId}`);
+        const quizData = quizResponse.data;
         setQuiz(quizData);
 
         // Fetch student's attempts
-        const attemptsResponse = await fetch(`/api/student/quiz/attempts?quizId=${quizId}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (attemptsResponse.ok) {
-          const attemptsData = await attemptsResponse.json();
+        try {
+          const attemptsResponse = await apiClient.get(`/student/quiz/attempts?quizId=${quizId}`);
+          const attemptsData = attemptsResponse.data;
           setAttempts(attemptsData);
 
           // Calculate stats
@@ -175,8 +160,10 @@ const QuizOverview = () => {
             canAttempt,
             nextAttemptAvailable: null
           });
+        } catch (attemptsError) {
+          // Continue without attempts data
+          console.log('Could not fetch attempts:', attemptsError);
         }
-
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load quiz data');
       } finally {
@@ -194,21 +181,8 @@ const QuizOverview = () => {
       setStartingQuiz(true);
       
       // Start quiz attempt
-      const response = await fetch('/api/student/quiz/start', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ quizId: quiz._id })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to start quiz');
-      }
-
-      const data = await response.json();
+      const response = await apiClient.post('/student/quiz/start', { quizId: quiz._id });
+      const data = response.data;
       
       // Navigate to quiz page with attempt ID
       navigate(`/quiz/${quiz._id}/attempt/${data.attemptId}`);

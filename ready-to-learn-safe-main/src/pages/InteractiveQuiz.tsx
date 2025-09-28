@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { apiClient } from '@/utils/api';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -172,18 +173,8 @@ const InteractiveQuiz = () => {
       
       try {
         setLoading(true);
-        const response = await fetch(`/api/quizzes/${quizId}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch quiz data');
-        }
-
-        const data: QuizData = await response.json();
+        const response = await apiClient.get(`/quizzes/${quizId}`);
+        const data: QuizData = response.data;
         setQuizData(data);
         
         // Set initial time limit (convert minutes to seconds)
@@ -220,20 +211,8 @@ const InteractiveQuiz = () => {
     if (!quizData) return;
     
     try {
-      const response = await fetch('/api/student/quiz/start', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ quizId: quizData._id })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to start quiz attempt');
-      }
-
-      const data = await response.json();
+      const response = await apiClient.post('/student/quiz/start', { quizId: quizData._id });
+      const data = response.data;
       setCurrentAttemptId(data.attemptId);
       
       // Start progress tracking
@@ -365,25 +344,12 @@ const InteractiveQuiz = () => {
         answers: answers
       });
 
-      const response = await fetch('/api/student/quiz/submit', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          attemptId: currentAttemptId,
-          answers
-        })
+      const response = await apiClient.post('/student/quiz/submit', {
+        attemptId: currentAttemptId,
+        answers
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Submit error:', errorText);
-        throw new Error(`Failed to submit quiz: ${response.status} ${response.statusText}`);
-      }
-
-      const result: QuizResult = await response.json();
+      
+      const result: QuizResult = response.data;
       console.log('Quiz submitted successfully:', result);
       setResult(result);
       setQuizCompleted(true);
